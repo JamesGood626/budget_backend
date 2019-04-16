@@ -1,0 +1,32 @@
+# Specifiy a base image
+FROM elixir:alpine
+
+# Enables phoenix:live_reload for refreshing code on save while server is running
+RUN apk add inotify-tools
+
+# prevents running the below commands in the top level directory to avoid conflicts
+WORKDIR /opt/app
+
+# first path is relative to the build context (i.e. if you're in the project dir and execute
+# docker build . then it ./ will refer to budget_app project dir)
+# second path is the place to copy the stuff inside the container
+COPY ./mix.exs ./mix.lock ./
+
+# Install some dependencies
+RUN mix local.hex --force && \
+    mix local.rebar --force
+RUN mix deps.get
+
+
+# Copy in the rest of the files of the project to avoid having to install all dependencies
+# whenever we build an image after having updated any project files.
+COPY ./ ./
+
+# Default command
+CMD ["mix", "phx.server"]
+
+# command to run using port mapping to allow incoming requests to the docker container:
+# The first port is our localhost
+# The second port is the port we want to map that to inside our container
+# These ports aren't required to be identical, but the app is running on 4000 in the container.
+# docker run -p 4000:4000 jamesgood626/budget-app

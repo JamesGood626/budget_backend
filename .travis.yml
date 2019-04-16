@@ -1,0 +1,21 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t jamesgood626/budget_slayer -f Dockerfile.dev .
+
+script:
+  - docker run jamesgood626/budget_slayer mix test
+# deploy:
+#   provider: elasticbeanstalk
+#   region: "us-east-2"
+#   app: "budget-slayer"
+#   env: "BudgetSlayer-env"
+#   bucket_name: "elasticbeanstalk-us-east-2-598864639354"
+#   bucket_path: "budget-slayer"
+#   on:
+#     branch: master
+#   access_key_id: $AWS_ACCESS_KEY
+#   secret_access_key:
+#     secure: "$AWS_SECRET_KEY"

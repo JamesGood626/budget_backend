@@ -1,0 +1,9 @@
+<div>
+    <p>The email: <%= @user_email %>
+    <br/>
+    <p>The link: <%= BudgetAppWeb.Router.Helpers.auth_path(BudgetAppWeb.Endpoint, :approve_sign_up, short_token: @short_token) %></p>
+    <br/>
+    <%= link "Approve sign up:", to: "#{"http://localhost:4000"}#{BudgetAppWeb.Router.Helpers.auth_path(BudgetAppWeb.Endpoint, :approve_sign_up, short_token: @short_token, user_email: @user_email)}" %>
+    <%= link "Deny sign up:", to: "#{"http://localhost:4000"}#{BudgetAppWeb.Router.Helpers.auth_path(BudgetAppWeb.Endpoint, :deny_sign_up, short_token: @short_token, user_email: @user_email)}" %>
+</div>
+
