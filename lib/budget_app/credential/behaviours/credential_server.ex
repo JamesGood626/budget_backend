@@ -24,6 +24,10 @@ defmodule BudgetApp.CredentialServer do
     GenServer.call(__MODULE__, {:get_user, email})
   end
 
+  def add_hashed_remember_token(email, hashed_remember_token) do
+    GenServer.call(__MODULE__, {:add_hashed_remember_token, email, hashed_remember_token})
+  end
+
   def remove_user(email) do
     GenServer.cast(__MODULE__, {:remove_user, email})
   end
@@ -50,8 +54,33 @@ defmodule BudgetApp.CredentialServer do
 
   # All of the handle_call/handle_casts need to be made more resilient to errors.
   def handle_call({:get_user, email}, _from, state) do
-    %{^email => credentials} = state
-    {:reply, credentials, state}
+    val =
+      case Map.has_key?(state, email) do
+        true ->
+          %{^email => credentials} = state
+          {:ok, credentials}
+
+        false ->
+          {:err, "Invalid request."}
+      end
+
+    {:reply, val, state}
+  end
+
+  def handle_call({:add_hashed_remember_token, email, hashed_remember_token}, _from, state) do
+    case Map.has_key?(state, email) do
+      true ->
+        %{^email => credentials} = state
+
+        updated_credentials =
+          Map.put_new(credentials, "hashed_remember_token", hashed_remember_token)
+
+        updated_state = Map.put(state, email, updated_credentials)
+        {:reply, {:ok, "Added Remember Token Hash."}, updated_state}
+
+      false ->
+        {:reply, {:err, "Invalid request."}, state}
+    end
   end
 
   def handle_cast({:remove_user, email}, state) do
@@ -79,7 +108,7 @@ defmodule BudgetApp.CredentialServer do
 
   def handle_cast({:remove_short_token, email}, state) do
     %{^email => credentials} = state
-    old_credentials = Map.fetch(state, email)
+    {:ok, old_credentials} = Map.fetch(state, email)
     updated_credentials = Map.delete(old_credentials, "short_token")
     updated_state = Map.put(state, email, updated_credentials)
     {:noreply, updated_state}

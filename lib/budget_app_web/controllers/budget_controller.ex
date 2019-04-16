@@ -1,11 +1,25 @@
 defmodule BudgetAppWeb.BudgetController do
   use BudgetAppWeb, :controller
-  alias BudgetApp.BudgetServer
+  alias BudgetApp
+
+  import BudgetApp.Auth
+  plug :authorize_user
 
   @doc """
     A GET to retrieve an existing account
   """
   def index(conn, _params) do
+    # Contains email & remember_token
+    # Move this line into a function plug to place above protected routes for AuthZ
+    # session_data = get_session(conn, :session_token)
+    # IO.puts("THE CONN:")
+    # IO.inspect(conn)
+    %{current_user: current_user} = conn.assigns
+    IO.puts("THE conn.assigns.current_user")
+    IO.inspect(current_user)
+    # cookie = conn.fetch_cookies()
+    # IO.puts("THE FETCHED COOKIE")
+    # IO.inspect(cookie)
     # IO.puts("GET INDEX HIT")
     # [{_, name}] = Enum.filter(conn.req_headers, fn {key, _} -> key === "name" end)
     # name = String.to_atom(name)

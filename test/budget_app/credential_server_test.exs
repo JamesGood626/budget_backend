@@ -45,7 +45,7 @@ defmodule CredentialServerTest do
   test "credential server retrieve user's credentials from internal state.", %{} do
     CredentialServer.create_credentials(@credentials)
 
-    user = CredentialServer.get_user(@credentials["email"])
+    {:ok, user} = CredentialServer.get_user(@credentials["email"])
     assert user === @credentials
   end
 
@@ -60,7 +60,7 @@ defmodule CredentialServerTest do
 
   test "credential server can remove user credentials from state.", %{} do
     CredentialServer.create_credentials(@credentials)
-    user = CredentialServer.get_user(@credentials["email"])
+    {:ok, user} = CredentialServer.get_user(@credentials["email"])
     assert user === @credentials
 
     CredentialServer.remove_user(@credentials["email"])
@@ -70,12 +70,17 @@ defmodule CredentialServerTest do
 
   test "credential server can retrieve and activate user active status.", %{} do
     CredentialServer.create_credentials(@credentials)
-    user = CredentialServer.get_user(@credentials["email"])
+    {:ok, user} = CredentialServer.get_user(@credentials["email"])
     assert user === @credentials
 
     CredentialServer.activate_user(@credentials["email"])
     credential_server_state = CredentialServer.get_state()
 
     assert credential_server_state === @credentials_active
+  end
+
+  test "credential server replies with :err if user not in genserver state.", %{} do
+    {:err, message} = CredentialServer.get_user(@credentials["email"])
+    assert message === "Invalid request."
   end
 end
