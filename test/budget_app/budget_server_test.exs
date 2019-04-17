@@ -2,8 +2,8 @@ defmodule BudgetServerTest do
   use ExUnit.Case, async: true
   alias BudgetApp.{BudgetServer, Budget}
 
-  @primary_account "James"
-  @guest_account "Guest"
+  @primary_account "james.good@codeimmersives.com"
+  @guest_account "guest@gmail.com"
   @initial_account_data %Budget{
     budget_tracker: %{
       budget: %{

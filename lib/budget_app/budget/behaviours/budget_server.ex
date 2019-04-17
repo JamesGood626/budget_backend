@@ -161,7 +161,7 @@ defmodule BudgetApp.BudgetServer do
 
   # Add date as an arg
   def deposit(name, amount) do
-    GenServer.call(via_tuple(name), {:get_account, name})
+    GenServer.call(via_tuple(name), {:deposit, name})
   end
 
   def set_budget(name, budget_limit) do
@@ -213,6 +213,12 @@ defmodule BudgetApp.BudgetServer do
           state
       end
 
+    ##########
+    ## TODO ##
+    ##########
+    # You're currently setting newly initialized state,
+    # BUT you still need to pull from and update the ets table
+    # after user actions.
     :ets.insert(:budget_tracker_state, {name, state})
     {:noreply, state}
   end
@@ -221,16 +227,16 @@ defmodule BudgetApp.BudgetServer do
     state =
       Budget.create_account()
       |> Budget.initialize_budget(current_month, current_year)
-      |> check_valid_account(name)
+      |> check_guest_account(name)
   end
 
   # Test kater to see if you can pattern match existing variables with
   # the incoming function params. i.e. if there were env vars for the
   # random account names, could I have multiple function clauses to check
   # each one.
-  defp check_valid_account(state, name) do
+  defp check_guest_account(state, name) do
     # If you're not James or Guest... You shall not pass!
-    IO.puts("check_valid_account running!!!!!!")
+    IO.puts("check_guest_account running!!!!!!")
 
     # Old impl.
     # case name do
@@ -247,7 +253,7 @@ defmodule BudgetApp.BudgetServer do
     # end
 
     case name do
-      "James" ->
+      "james.good@codeimmersives.com" ->
         state
 
       _ ->
@@ -375,25 +381,12 @@ defmodule BudgetApp.BudgetServer do
   # But this could mean that a deluge of requests could still come in, defeating the
   # purpose of why I even set out to do this. Well.. not entirely, state won't be built
   # up nonstop, but DDoS is still something I need to determine how to prevent.
-  defp authorize_request(state, name) do
-    case name do
-      "Guest" ->
-        Budget.check_serviced_requests(state)
+  defp authorize_request(state, "james.good@codeimmersives.com"), do: state
+  defp authorize_request(state, _guest_name), do: Budget.check_serviced_requests(state)
 
-      _ ->
-        state
-    end
-  end
-
-  defp increment_guest_serviced_requests(state, name) do
-    case name do
-      "Guest" ->
-        Budget.increment_serviced_requests(state)
-
-      _ ->
-        state
-    end
-  end
+  defp increment_guest_serviced_requests(state, "james.good@codeimmersives.com"), do: state
+  defp increment_guest_serviced_requests(state, _guest_name),
+    do: Budget.increment_serviced_requests(state)
 
   # def handle_call({:set_budget, budget_limit}, _from, state) do
   #   new_state = Budget.set_budget(state, budget_limit)

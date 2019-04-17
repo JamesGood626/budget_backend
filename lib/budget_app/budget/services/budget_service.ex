@@ -3,6 +3,8 @@ defmodule BudgetApp.Budget do
   alias Budget
 
   defstruct budget_tracker: %{
+              current_month: nil,
+              current_year: nil,
               limit_requests: false,
               request_limit: 0,
               serviced_requests: 0,
@@ -32,7 +34,6 @@ defmodule BudgetApp.Budget do
   # and current_year into the budget_monthly_interval_generator
   # function from within Budget.init/1 to reduce duplication.
 
-  @spec get_current_date() :: {DateTime.t(), pos_integer(), integer()}
   def get_current_date do
     datetime = Timex.now()
     {datetime, datetime.month, datetime.year}
@@ -75,21 +76,6 @@ defmodule BudgetApp.Budget do
     %BudgetApp.Budget{}
   end
 
-  # %BudgetApp.Budget{
-  #   budget_tracker: %{
-  #     budget: %{
-  #       budget_limit: 0,
-  #       budget_set: false,
-  #       account_balance: 0,
-  #       unnecessary_expense_total: 0
-  #     },
-  #     limit_requests: false,
-  #     request_limit: 200,
-  #     serviced_requests: 0,
-  #     years_tracked: %{}
-  #   }
-  # }
-
   @doc """
   Called upon initializing budget state inside of BudgetApp.BudgetServer's init/1.
 
@@ -109,6 +95,8 @@ defmodule BudgetApp.Budget do
                 daily_timer: nil,
                 monthly_timer: nil
               },
+          current_month: 3,
+          current_year: 2019,
           limit_requests: false,
           request_limit: 0,
           serviced_requests: 0,
@@ -153,18 +141,51 @@ defmodule BudgetApp.Budget do
       unnecessary_expenses: []
     }
 
-    updated_years_tracked =
+    updated_budget_tracker =
       put_in(
-        budget.budget_tracker.years_tracked,
-        Enum.map([current_year, :months_tracked, current_month], &Access.key(&1, %{})),
-        nested_budget_info
+        budget.budget_tracker,
+        Enum.map([:current_year], &Access.key(&1, %{})),
+        current_year
       )
-
-    Map.put(budget.budget_tracker, :years_tracked, updated_years_tracked)
 
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
+        [Access.key!(:budget_tracker)],
+        fn val ->
+          {:ok, updated_budget_tracker}
+        end
+      )
+
+    IO.puts("BUDGET SHOULD BE UPDATED W/ CURRENT_YEAR")
+    IO.inspect(updated_budget)
+
+    updated_budget_tracker =
+      put_in(
+        updated_budget.budget_tracker,
+        Enum.map([:current_month], &Access.key(&1, %{})),
+        current_month
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        [Access.key!(:budget_tracker)],
+        fn val ->
+          {:ok, updated_budget_tracker}
+        end
+      )
+
+    updated_years_tracked =
+      put_in(
+        updated_budget.budget_tracker.years_tracked,
+        Enum.map([current_year, :months_tracked, current_month], &Access.key(&1, %{})),
+        nested_budget_info
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        updated_budget,
         [Access.key!(:budget_tracker), Access.key!(:years_tracked)],
         fn val ->
           {:ok, updated_years_tracked}
@@ -174,34 +195,104 @@ defmodule BudgetApp.Budget do
     updated_budget
   end
 
-  # updated_years_tracked =
-  #   Map.put(budget.budget_tracker.years_tracked, current_year, %{
-  #     months_tracked: %{}
-  #   })
+  @doc """
+  Called upon initializing budget state for a guest account inside of BudgetApp.BudgetServer's check_guest_account/2.
 
-  # updated_months_tracked =
-  #   Map.put(budget.budget_tracker.years_tracked[current_year].months_tracked, current_month, %{
-  #     budget: 0,
-  #     total_deposited: 0,
-  #     total_necessary_expenses: 0,
-  #     total_unnecessary_expenses: 0,
-  #     budget_exceeded: false,
-  #     deposits: [],
-  #     necessary_expenses: [],
-  #     unnecessary_expenses: []
-  #   })
+  ## Examples
 
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> BudgetApp.Budget.set_guest_restrictions(budget)
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            account_balance: 0,
+            budget_exceeded: false,
+            budget_set: false,
+            current_budget: nil
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          current_month: 3,
+          current_year: 2019,
+          limit_requests: true,
+          request_limit: 200,
+          serviced_requests: 0,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
+        }
+      }
+  """
   def set_guest_restrictions(budget) do
     updated_budget = put_in(budget.budget_tracker.limit_requests, true)
     updated_budget = put_in(updated_budget.budget_tracker.request_limit, 200)
 
-    IO.puts("BUDGET UPDATED WITH TIMER")
-    IO.inspect(updated_budget)
     updated_budget
   end
 
+  @doc """
+  Called upon initializing budget state inside of BudgetApp.BudgetServer whenever a handle_call
+  or handle_cast is executed.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
+      iex> budget = BudgetApp.Budget.increment_serviced_requests(budget)
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            account_balance: 0,
+            budget_exceeded: false,
+            budget_set: false,
+            current_budget: nil
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          current_month: 3,
+          current_year: 2019,
+          limit_requests: true,
+          request_limit: 200,
+          serviced_requests: 1,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
+        }
+      }
+  """
   def increment_serviced_requests(budget) do
-    # HOW DO I HANDLE POTENTIAL ERRORS FOR THIS get_and_update_in?
     {:ok, updated_budget_tracker} =
       get_and_update_in(
         budget,
@@ -211,10 +302,21 @@ defmodule BudgetApp.Budget do
         end
       )
 
-    IO.inspect(updated_budget_tracker)
     updated_budget_tracker
   end
 
+  @doc """
+  Called inside of BudgetApp.BudgetServer's authorize_request/2 when determining whether
+  a guest has exceeded their daily alotted request limit.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
+      iex> BudgetApp.Budget.check_serviced_requests(budget)
+      true
+  """
   def check_serviced_requests(
         %{budget_tracker: %{request_limit: request_limit, serviced_requests: serviced_requests}} =
           budget
@@ -223,8 +325,10 @@ defmodule BudgetApp.Budget do
   end
 
   @doc """
-  Accepts budget state as an argument and resets
-  serviced_requests to 0.
+  Accepts budget state as an argument and resets serviced_requests to 0.
+  schedule_daily_work that is called every 24 hours schedules
+  handle_info(:reset_serviced_requests, state) in BudgetApp.Budget to be called periodically.
+
 
   Usage:
     The reset_serviced_requests/1 function is called inside of
@@ -237,6 +341,7 @@ defmodule BudgetApp.Budget do
 
       iex> budget = BudgetApp.Budget.create_account()
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
       iex> budget = BudgetApp.Budget.increment_serviced_requests(budget)
       iex> BudgetApp.Budget.reset_serviced_requests(budget)
       %BudgetApp.Budget{
@@ -251,10 +356,27 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          current_month: 3,
+          current_year: 2019,
           limit_requests: true,
           request_limit: 200,
           serviced_requests: 0,
-          years_tracked: %{}
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
         }
       }
   """
@@ -262,73 +384,7 @@ defmodule BudgetApp.Budget do
     put_in(budget.budget_tracker.serviced_requests, 0)
   end
 
-  # Testing the two deposit/2 function clauses with doctest
-  # Will only work for one at a time... Both tests are passing right now
-  # BUT I'll need to look further into this.
-  # Perhaps move out the get_in_and_update logic to another function
-  # test that with a doctest, and then manually unit test the two
-  # separate function clauses
-
   @doc """
-  Accepts budget state as an argument and resets
-  serviced_requests to 0.
-  †
-  Usage:
-    The deposit/2 function is called inside of
-    the BudgetServer GenServer module.
-
-    The handle_call/2 which pattern matches on :deposit
-    is where this function is called, and passes the budget
-    held in GenServer state, as well as a user entered amount to
-    update the account_balance state with.
-
-    This function should only execute when Budget.budget_tracker.limit_requests
-    is set to true.
-
-  ## Examples
-
-      iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
-      iex> BudgetApp.Budget.deposit(budget, 20000)
-      %BudgetApp.Budget{
-        budget_tracker: %{
-          budget: %{
-            account_balance: 20000,
-            current_budget: nil,
-            budget_set: false,
-            budget_exceeded: false
-          },
-          timerss: %{
-            daily_timers: nil,
-            monthly_timers: nil
-          },
-          limit_requests: true,
-          request_limit: 200,
-          serviced_requests: 1,
-          years_tracked: %{}
-        }
-      }
-  """
-  def deposit(%BudgetApp.Budget{budget_tracker: %{limit_requests: true}} = budget, amount) do
-    IO.puts("THE LIMIT REQUESTS DEPOSIT BEING TRIGGERED")
-
-    {:ok, updated_account_balance} =
-      get_and_update_in(
-        budget,
-        [Access.key!(:budget_tracker), Access.key!(:budget), Access.key!(:account_balance)],
-        fn val ->
-          {:ok, val + amount}
-        end
-      )
-
-    BudgetApp.Budget.increment_serviced_requests(updated_account_balance)
-  end
-
-  @doc """
-  Accepts budget state as an argument and resets
-  serviced_requests to 0.
-
-  Usage:
     The deposit/2 function is called inside of
     the BudgetServer GenServer module.
 
@@ -340,7 +396,10 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> BudgetApp.Budget.deposit(budget, 50000)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 12, 2020)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 1, 2021)
+      iex> BudgetApp.Budget.deposit(budget, %{"income_source" => "check", "deposit_amount" => 50000})
       %BudgetApp.Budget{
         budget_tracker: %{
           budget: %{
@@ -353,28 +412,135 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          current_month: 1,
+          current_year: 2021,
           limit_requests: false,
           request_limit: 0,
           serviced_requests: 0,
-          years_tracked: %{}
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            },
+            2020 => %{
+              months_tracked: %{
+                12 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            },
+            2021 => %{
+              months_tracked: %{
+                1 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [%{"income_source" => "check", "deposit_amount" => 50000}],
+                  necessary_expenses: [],
+                  total_deposited: 50000,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
         }
       }
   """
-  def deposit(budget, amount) do
-    # HOW DO I HANDLE POTENTIAL ERRORS FOR THIS get_and_update_in?
-    {:ok, updated_account_balance} =
+  def deposit(
+        budget,
+        %{"income_source" => income_source, "deposit_amount" => deposit_amount} = deposit_slip
+      ) do
+    {:ok, updated_budget} =
       get_and_update_in(
         budget,
         [Access.key!(:budget_tracker), Access.key!(:budget), Access.key!(:account_balance)],
         fn val ->
-          {:ok, val + amount}
+          {:ok, val + deposit_amount}
         end
       )
 
-    # Update the nested deposits array
-    # years_tracked.current_year(num).months_tracked.current_month(num).deposits
-    # be sure to add to the total_deposited as well.
-    updated_account_balance
+    # You know... a better way to have accodated this update would've just been
+    # to maintain the current_year and current_month as key/value pairs on budget_tracker
+    # and then just passed those in as arguments to this function.
+    # I'm in too deep. (BUT I should really do that refactor, otherwise I'd need to repeat
+    # these steps for total_necessary_expenses, total_unnecessary_expenses, as well)
+    # Gets the last year to access the current month.
+    year_key_list =
+      updated_budget.budget_tracker.years_tracked
+      |> Enum.map(fn {key, val} -> key end)
+      |> Enum.reverse()
+
+    # Gets the last month in the data structure to update total_deposited.
+    current_year = List.first(year_key_list)
+
+    month_key_list =
+      updated_budget.budget_tracker.years_tracked[current_year].months_tracked
+      |> Enum.map(fn {key, val} -> key end)
+      |> Enum.reverse()
+
+    current_month = List.first(month_key_list)
+
+    {:ok, updated_budget} =
+      update_total_deposited(updated_budget, deposit_amount, current_year, current_month)
+
+    {:ok, updated_budget} =
+      update_deposits_list(updated_budget, deposit_slip, current_year, current_month)
+
+    IO.puts("THIS IS THE UPDATED BUDGET")
+    IO.inspect(updated_budget)
+    updated_budget
+  end
+
+  defp update_total_deposited(updated_budget, deposit_amount, current_year, current_month) do
+    get_and_update_in(
+      updated_budget,
+      [
+        Access.key!(:budget_tracker),
+        Access.key!(:years_tracked),
+        Access.key!(current_year),
+        Access.key!(:months_tracked),
+        Access.key!(current_month),
+        Access.key!(:total_deposited)
+      ],
+      fn val ->
+        {:ok, val + deposit_amount}
+      end
+    )
+  end
+
+  defp update_deposits_list(budget, deposit_slip, current_year, current_month) do
+    get_and_update_in(
+      budget,
+      [
+        Access.key!(:budget_tracker),
+        Access.key!(:years_tracked),
+        Access.key!(current_year),
+        Access.key!(:months_tracked),
+        Access.key!(current_month),
+        Access.key!(:deposits)
+      ],
+      fn val ->
+        {:ok, [deposit_slip | val]}
+      end
+    )
   end
 
   # Change this to set the nested budget -> Can't handle this until

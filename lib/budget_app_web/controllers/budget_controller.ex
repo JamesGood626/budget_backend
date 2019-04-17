@@ -1,6 +1,7 @@
 defmodule BudgetAppWeb.BudgetController do
   use BudgetAppWeb, :controller
   alias BudgetApp
+  alias BudgetApp.BudgetServer
 
   import BudgetApp.Auth
   plug :authorize_user
@@ -9,27 +10,19 @@ defmodule BudgetAppWeb.BudgetController do
     A GET to retrieve an existing account
   """
   def index(conn, _params) do
-    # Contains email & remember_token
-    # Move this line into a function plug to place above protected routes for AuthZ
-    # session_data = get_session(conn, :session_token)
-    # IO.puts("THE CONN:")
-    # IO.inspect(conn)
+    # current_user is the user's email
     %{current_user: current_user} = conn.assigns
-    IO.puts("THE conn.assigns.current_user")
-    IO.inspect(current_user)
-    # cookie = conn.fetch_cookies()
-    # IO.puts("THE FETCHED COOKIE")
-    # IO.inspect(cookie)
-    # IO.puts("GET INDEX HIT")
-    # [{_, name}] = Enum.filter(conn.req_headers, fn {key, _} -> key === "name" end)
-    # name = String.to_atom(name)
-    # account = BudgetServer.get_account(name)
+    %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
+    %{budget: budget, years_tracked: years_tracked} = budget_tracker
 
-    # IO.puts("GOT DA ACCOUNT")
-    # IO.inspect(account)
-    # # This Does indeed return
-    # json(conn, Map.from_struct(account))
-    json(conn, %{aws_success: "it's indeed alive"})
+    IO.puts("THIS IS WHAT'S GETTING ENCODED")
+    IO.inspect(%{budget: budget, years_tracked: years_tracked})
+
+    json_resp =
+      %{budget: budget, years_tracked: years_tracked}
+      |> Poison.encode!()
+
+    json(conn, json_resp)
   end
 
   @doc """
