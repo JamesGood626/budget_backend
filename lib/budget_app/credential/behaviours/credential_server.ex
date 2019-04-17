@@ -28,6 +28,10 @@ defmodule BudgetApp.CredentialServer do
     GenServer.call(__MODULE__, {:add_hashed_remember_token, email, hashed_remember_token})
   end
 
+  def remove_hashed_remember_token(email) do
+    GenServer.call(__MODULE__, {:remove_hashed_remember_token, email})
+  end
+
   def remove_user(email) do
     GenServer.cast(__MODULE__, {:remove_user, email})
   end
@@ -83,6 +87,19 @@ defmodule BudgetApp.CredentialServer do
     end
   end
 
+  def handle_call({:remove_hashed_remember_token, email}, _from, state) do
+    case Map.has_key?(state, email) do
+      true ->
+        %{^email => credentials} = state
+        updated_credentials = Map.delete(credentials, "hashed_remember_token")
+        updated_state = Map.put(state, email, updated_credentials)
+        {:reply, {:ok, "Removed Remember Token Hash."}, updated_state}
+
+      false ->
+        {:reply, {:err, "Invalid request."}, state}
+    end
+  end
+
   def handle_cast({:remove_user, email}, state) do
     new_state = Map.delete(state, email)
     {:noreply, new_state}
@@ -93,7 +110,6 @@ defmodule BudgetApp.CredentialServer do
   end
 
   def handle_cast({:create_credentials, credentials}, state) do
-    IO.puts("IN CREATE CREDENTIALS HANDLE CAST")
     %{"email" => email} = credentials
     new_state = Map.put_new(state, email, credentials)
     {:noreply, new_state}

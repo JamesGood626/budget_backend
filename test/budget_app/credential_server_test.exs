@@ -54,7 +54,20 @@ defmodule CredentialServerTest do
     CredentialServer.add_short_token(@credentials["email"], "da_short_token")
     credential_server_state = CredentialServer.get_state()
 
+    # updated credentials required for matching genserver state that has newly added short token.
     updated_credentials = Map.put(@credentials, "short_token", "da_short_token")
+    assert credential_server_state === %{"jamesgood626@gmail.com" => updated_credentials}
+  end
+
+  test "credential server can add a hashed_remember_token to a user's credentials.", %{} do
+    CredentialServer.create_credentials(@credentials)
+    CredentialServer.add_hashed_remember_token(@credentials["email"], "da_hashed_remember_token")
+    credential_server_state = CredentialServer.get_state()
+
+    # updated credentials required for matching genserver state that has newly added hashed_remember_token.
+    updated_credentials =
+      Map.put(@credentials, "hashed_remember_token", "da_hashed_remember_token")
+
     assert credential_server_state === %{"jamesgood626@gmail.com" => updated_credentials}
   end
 
@@ -79,7 +92,7 @@ defmodule CredentialServerTest do
     assert credential_server_state === @credentials_active
   end
 
-  test "credential server replies with :err if user not in genserver state.", %{} do
+  test "credential server replies with :err if user is not in genserver state.", %{} do
     {:err, message} = CredentialServer.get_user(@credentials["email"])
     assert message === "Invalid request."
   end

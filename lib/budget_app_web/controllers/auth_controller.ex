@@ -66,7 +66,6 @@ defmodule BudgetAppWeb.AuthController do
     case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
       true ->
         # Generate remember token, set remember token in cookie, and send success response
-        IO.puts("MATCHED PASSWORD")
         remember_token = AuthService.generate_remember_token()
         hashed_remember_token = AuthService.hash_remember_token(remember_token)
         CredentialServer.add_hashed_remember_token(email, hashed_remember_token)
@@ -81,8 +80,18 @@ defmodule BudgetAppWeb.AuthController do
   end
 
   def logout(conn, _params) do
-    # TODO
-    # remove the remember token hash from the GenServer state so that any subsequent requests will not be
-    # Authorized.
+    # Tried clear_session.1 | delete_session/2 | configure_session(conn, :drop)
+    # None of the above worked to clear the cookie from the conn session. However,
+    # just removing the remember token alone does force the user to sign in again.
+    # but still want to look into this later.
+    %{email: email} = get_session(conn, :session_token)
+
+    case CredentialServer.remove_hashed_remember_token(email) do
+      {:ok, msg} ->
+        json(conn, %{message: "Logout Success!"})
+
+      {:err, msg} ->
+        json(conn, %{message: "Logout Failed!"})
+    end
   end
 end

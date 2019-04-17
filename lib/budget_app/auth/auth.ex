@@ -4,6 +4,7 @@ defmodule BudgetApp.Auth do
   alias BudgetApp.CredentialServer
   alias BudgetApp.AuthService
 
+  # halt isn't enough, need to send a json response.
   def authorize_user(conn, _opts) do
     %{email: email, remember_token: remember_token} = get_session(conn, :session_token)
 
@@ -31,7 +32,14 @@ defmodule BudgetApp.Auth do
     end
   end
 
-  def remember_token_matches?(user, remember_token) do
-    AuthService.hash_remember_token(remember_token) === user["hashed_remember_token"]
+  def remember_token_matches?(
+        %{"hashed_remember_token" => hashed_remember_token} = user,
+        remember_token
+      ) do
+    AuthService.hash_remember_token(remember_token) === hashed_remember_token
+  end
+
+  def remember_token_matches?(_user, _remember_token) do
+    false
   end
 end
