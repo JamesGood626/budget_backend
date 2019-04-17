@@ -2,29 +2,40 @@ defmodule BudgetAppWeb.DepositController do
   use BudgetAppWeb, :controller
   alias BudgetApp.BudgetServer
 
+  import BudgetApp.Auth
+  plug :authorize_user
+
   @doc """
     A POST to create a new deposit.
   """
   def create(
         conn,
-        %{"income_source" => income_source, "deposit_amount" => deposit_amount} = params
+        %{
+          "income_source" => income_source,
+          "deposit_amount" => deposit_amount,
+          "current_month" => current_month,
+          "current_year" => current_year
+        } = params
       ) do
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
-    %{budget_tracker: budget_tracker} = BudgetServer.deposit(params)
 
-    # json_resp =
-    #   %{budget: budget, years_tracked: years_tracked}
-    #   |> Poison.encode!()
+    %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
+      BudgetServer.deposit(current_user, params, {current_month, current_year})
 
-    # json(conn, json_resp)
+    current_month_data = years_tracked[current_year].months_tracked[current_month]
 
-    # Need to refactor Budget to have current_month & current_year stored in
-    # budget_tracker to facilitate posting current_month & current_year to this
-    # controller (also benefits client side so they know how to update data structure there)
-    # so that this controller can only return the new changes -> to avoid having to send the
-    # entire data structure every time.
-    json(conn, %{message: "You deposit it #{income_source}"})
+    payload = %{
+      account_balance: budget.account_balance,
+      total_deposited: current_month_data.total_deposited,
+      deposits: current_month_data.deposits
+    }
+
+    json_resp =
+      payload
+      |> Poison.encode!()
+
+    json(conn, json_resp)
   end
 
   @doc """

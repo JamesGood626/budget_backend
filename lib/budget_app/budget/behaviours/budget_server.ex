@@ -159,9 +159,8 @@ defmodule BudgetApp.BudgetServer do
     GenServer.call(via_tuple(name), {:get_account, name})
   end
 
-  # Add date as an arg
-  def deposit(name, amount) do
-    GenServer.call(via_tuple(name), {:deposit, name})
+  def deposit(name, deposit_slip, current_date) do
+    GenServer.call(via_tuple(name), {:deposit, name, deposit_slip, current_date})
   end
 
   def set_budget(name, budget_limit) do
@@ -201,8 +200,12 @@ defmodule BudgetApp.BudgetServer do
     # i.e. if current_month = 3 and current_year = 19
     #      then next_month = 4 and year = 19
     {_datetime, current_month, current_year} = Budget.get_current_date()
+    IO.puts("cureent_month")
+    IO.inspect(current_month)
+    IO.puts("cureent_year")
+    IO.inspect(current_year)
     state = fresh_state(name, current_month, current_year)
-    {state, next_month, year} = schedule_monthly_work(state)
+    state = schedule_monthly_work(state)
 
     state =
       case :ets.lookup(:budget_tracker_state, name) do
@@ -257,7 +260,7 @@ defmodule BudgetApp.BudgetServer do
         state
 
       _ ->
-        {state} = schedule_daily_work(state)
+        state = schedule_daily_work(state)
         Budget.set_guest_restrictions(state)
     end
   end
@@ -286,6 +289,9 @@ defmodule BudgetApp.BudgetServer do
     {monthly_interval, next_month, next_year} = Budget.budget_monthly_interval_generator()
 
     IO.puts("Scheduling....")
+    # you need to break this scheduling of the timer out into a helper function to facilitate
+    # testing, and then pass in the monthly interval as dependency injection.
+    # All this in order to determine if the data structure continues to update accordingly.
     # Process.send_after/3 -> Third arg is milliseconds
     monthly_timer =
       Process.send_after(
@@ -295,7 +301,7 @@ defmodule BudgetApp.BudgetServer do
       )
 
     state = put_in(state.budget_tracker.timers.monthly_timer, monthly_timer)
-    {state, next_month, next_year}
+    state
   end
 
   # Need to manually test that the reset is truly occuring.
@@ -309,7 +315,7 @@ defmodule BudgetApp.BudgetServer do
     # Set the daily_interval to twenty four hours
     daily_timer = Process.send_after(self(), :reset_serviced_requests, @daily_interval)
     state = put_in(state.budget_tracker.timers.daily_timer, daily_timer)
-    {state}
+    state
   end
 
   defp cancel_timer(timer) do
@@ -338,16 +344,17 @@ defmodule BudgetApp.BudgetServer do
     IO.inspect(next_month)
     IO.inspect(next_year)
     # Reschdule once more
-    {state, _next_month, _next_year} = schedule_monthly_work(state)
+    state = schedule_monthly_work(state)
 
-    {:noreply, state}
+    updated_state = Budget.update_current_month_and_year(state, next_month, next_year)
+    {:noreply, updated_state}
   end
 
   def handle_info(:reset_serviced_requests, state) do
     IO.puts("THE :reset_serviced_requests handle_info TRIGGERED")
     # IO.inspect(state)
     Budget.reset_serviced_requests(state)
-    {state} = schedule_daily_work(state)
+    state = schedule_daily_work(state)
     {:noreply, state}
   end
 
@@ -360,7 +367,7 @@ defmodule BudgetApp.BudgetServer do
     {:reply, state, state}
   end
 
-  def handle_call({:deposit, name, amount}, _from, state) do
+  def handle_call({:deposit, name, deposit_slip, current_date}, _from, state) do
     # Possibly create a helper function for successful and failure cases
     # So that this case block may be used in a HOF where you pass those in as args
     # and whatever the return result from that is what gets returned from all
@@ -371,7 +378,7 @@ defmodule BudgetApp.BudgetServer do
 
       state ->
         state = increment_guest_serviced_requests(state, name)
-        new_state = Budget.deposit(state, amount)
+        new_state = Budget.deposit(state, deposit_slip, current_date)
         {:reply, new_state, new_state}
     end
   end
@@ -385,6 +392,7 @@ defmodule BudgetApp.BudgetServer do
   defp authorize_request(state, _guest_name), do: Budget.check_serviced_requests(state)
 
   defp increment_guest_serviced_requests(state, "james.good@codeimmersives.com"), do: state
+
   defp increment_guest_serviced_requests(state, _guest_name),
     do: Budget.increment_serviced_requests(state)
 

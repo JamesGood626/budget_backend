@@ -196,6 +196,136 @@ defmodule BudgetApp.Budget do
   end
 
   @doc """
+  Called for the monthly scheduled interval inside of BudgetApp.BudgetServer.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> BudgetApp.Budget.update_current_month_and_year(budget, 4, 2019)
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            account_balance: 0,
+            budget_exceeded: false,
+            budget_set: false,
+            current_budget: nil
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          current_month: 4,
+          current_year: 2019,
+          limit_requests: false,
+          request_limit: 0,
+          serviced_requests: 0,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                },
+                4 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            },
+          }
+        }
+      }
+  """
+  def update_current_month_and_year(budget, current_month, current_year) do
+    # The example I found that put me on the right path.
+    # I suppose there's also an Access.key/2 that allows you to populate a dynamically
+    # generated key with a default value.
+    # The Enum.map returns a list which contains the mapped keys in the Access.key/2
+    # and then you're able to update the last item's key in the list with the
+    # third arg passed into put_in
+    # put_in(map_three, Enum.map([current_year, :b, :c], &Access.key(&1, %{})), 42)
+    # %{2019 => %{b: %{c: 42}}}
+
+    # This function could use some refactoring... But later.
+    nested_budget_info = %{
+      budget: 0,
+      total_deposited: 0,
+      total_necessary_expenses: 0,
+      total_unnecessary_expenses: 0,
+      budget_exceeded: false,
+      deposits: [],
+      necessary_expenses: [],
+      unnecessary_expenses: []
+    }
+
+    updated_budget_tracker =
+      put_in(
+        budget.budget_tracker,
+        Enum.map([:current_year], &Access.key(&1, %{})),
+        current_year
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        [Access.key!(:budget_tracker)],
+        fn val ->
+          {:ok, updated_budget_tracker}
+        end
+      )
+
+    IO.puts("BUDGET SHOULD BE UPDATED W/ CURRENT_YEAR")
+    IO.inspect(updated_budget)
+
+    updated_budget_tracker =
+      put_in(
+        updated_budget.budget_tracker,
+        Enum.map([:current_month], &Access.key(&1, %{})),
+        current_month
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        [Access.key!(:budget_tracker)],
+        fn val ->
+          {:ok, updated_budget_tracker}
+        end
+      )
+
+    updated_years_tracked =
+      put_in(
+        updated_budget.budget_tracker.years_tracked,
+        Enum.map([current_year, :months_tracked, current_month], &Access.key(&1, %{})),
+        nested_budget_info
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        updated_budget,
+        [Access.key!(:budget_tracker), Access.key!(:years_tracked)],
+        fn val ->
+          {:ok, updated_years_tracked}
+        end
+      )
+
+    updated_budget
+  end
+
+  @doc """
   Called upon initializing budget state for a guest account inside of BudgetApp.BudgetServer's check_guest_account/2.
 
   ## Examples
@@ -399,7 +529,7 @@ defmodule BudgetApp.Budget do
       iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
       iex> budget = BudgetApp.Budget.initialize_budget(budget, 12, 2020)
       iex> budget = BudgetApp.Budget.initialize_budget(budget, 1, 2021)
-      iex> BudgetApp.Budget.deposit(budget, %{"income_source" => "check", "deposit_amount" => 50000})
+      iex> BudgetApp.Budget.deposit(budget, %{"income_source" => "check", "deposit_amount" => 50000}, {1, 2021})
       %BudgetApp.Budget{
         budget_tracker: %{
           budget: %{
@@ -466,7 +596,8 @@ defmodule BudgetApp.Budget do
   """
   def deposit(
         budget,
-        %{"income_source" => income_source, "deposit_amount" => deposit_amount} = deposit_slip
+        %{"income_source" => income_source, "deposit_amount" => deposit_amount} = deposit_slip,
+        {current_month, current_year}
       ) do
     {:ok, updated_budget} =
       get_and_update_in(
@@ -477,26 +608,19 @@ defmodule BudgetApp.Budget do
         end
       )
 
-    # You know... a better way to have accodated this update would've just been
-    # to maintain the current_year and current_month as key/value pairs on budget_tracker
-    # and then just passed those in as arguments to this function.
-    # I'm in too deep. (BUT I should really do that refactor, otherwise I'd need to repeat
-    # these steps for total_necessary_expenses, total_unnecessary_expenses, as well)
-    # Gets the last year to access the current month.
-    year_key_list =
-      updated_budget.budget_tracker.years_tracked
-      |> Enum.map(fn {key, val} -> key end)
-      |> Enum.reverse()
-
+    # Really just keeping this around for future reference
+    # year_key_list =
+    #   updated_budget.budget_tracker.years_tracked
+    #   |> Enum.map(fn {key, val} -> key end)
+    #   |> Enum.reverse()
     # Gets the last month in the data structure to update total_deposited.
-    current_year = List.first(year_key_list)
+    # current_year = List.first(year_key_list)
 
-    month_key_list =
-      updated_budget.budget_tracker.years_tracked[current_year].months_tracked
-      |> Enum.map(fn {key, val} -> key end)
-      |> Enum.reverse()
-
-    current_month = List.first(month_key_list)
+    # month_key_list =
+    #   updated_budget.budget_tracker.years_tracked[current_year].months_tracked
+    #   |> Enum.map(fn {key, val} -> key end)
+    #   |> Enum.reverse()
+    # current_month = List.first(month_key_list)
 
     {:ok, updated_budget} =
       update_total_deposited(updated_budget, deposit_amount, current_year, current_month)

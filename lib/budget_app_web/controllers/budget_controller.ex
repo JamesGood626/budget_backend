@@ -13,13 +13,26 @@ defmodule BudgetAppWeb.BudgetController do
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
     %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
-    %{budget: budget, years_tracked: years_tracked} = budget_tracker
+
+    %{
+      budget: budget,
+      years_tracked: years_tracked,
+      current_month: current_month,
+      current_year: current_year
+    } = budget_tracker
+
+    payload = %{
+      budget: budget,
+      years_tracked: years_tracked,
+      current_month: current_month,
+      current_year: current_year
+    }
 
     IO.puts("THIS IS WHAT'S GETTING ENCODED")
-    IO.inspect(%{budget: budget, years_tracked: years_tracked})
+    IO.inspect(payload)
 
     json_resp =
-      %{budget: budget, years_tracked: years_tracked}
+      payload
       |> Poison.encode!()
 
     json(conn, json_resp)
