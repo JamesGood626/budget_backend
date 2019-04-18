@@ -222,14 +222,14 @@ defmodule BudgetApp.BudgetServer do
     # You're currently setting newly initialized state,
     # BUT you still need to pull from and update the ets table
     # after user actions.
-    :ets.insert(:budget_tracker_state, {name, state})
+    update_ets_state(name, state)
     {:noreply, state}
   end
 
   defp fresh_state(name, current_month, current_year) do
     state =
       Budget.create_account()
-      |> Budget.initialize_budget(current_month, current_year)
+      |> Budget.initialize_budget(name, current_month, current_year)
       |> check_guest_account(name)
   end
 
@@ -260,8 +260,14 @@ defmodule BudgetApp.BudgetServer do
         state
 
       _ ->
-        state = schedule_daily_work(state)
-        Budget.set_guest_restrictions(state)
+        new_state =
+          schedule_daily_work(state)
+          |> Budget.set_guest_restrictions()
+
+        update_ets_state(state.budget_tracker.name, new_state)
+        IO.puts("STATE THAT GUEST IS INITIALIZED WITH")
+        IO.inspect(new_state)
+        new_state
     end
   end
 
@@ -300,8 +306,9 @@ defmodule BudgetApp.BudgetServer do
         monthly_interval
       )
 
-    state = put_in(state.budget_tracker.timers.monthly_timer, monthly_timer)
-    state
+    new_state = put_in(state.budget_tracker.timers.monthly_timer, monthly_timer)
+    update_ets_state(state.budget_tracker.name, new_state)
+    new_state
   end
 
   # Need to manually test that the reset is truly occuring.
@@ -314,8 +321,9 @@ defmodule BudgetApp.BudgetServer do
 
     # Set the daily_interval to twenty four hours
     daily_timer = Process.send_after(self(), :reset_serviced_requests, @daily_interval)
-    state = put_in(state.budget_tracker.timers.daily_timer, daily_timer)
-    state
+    new_state = put_in(state.budget_tracker.timers.daily_timer, daily_timer)
+    update_ets_state(state.budget_tracker.name, new_state)
+    new_state
   end
 
   defp cancel_timer(timer) do
@@ -346,16 +354,16 @@ defmodule BudgetApp.BudgetServer do
     # Reschdule once more
     state = schedule_monthly_work(state)
 
-    updated_state = Budget.update_current_month_and_year(state, next_month, next_year)
-    {:noreply, updated_state}
+    new_state = Budget.update_current_month_and_year(state, next_month, next_year)
+    {:noreply, new_state}
   end
 
   def handle_info(:reset_serviced_requests, state) do
     IO.puts("THE :reset_serviced_requests handle_info TRIGGERED")
     # IO.inspect(state)
     Budget.reset_serviced_requests(state)
-    state = schedule_daily_work(state)
-    {:noreply, state}
+    new_state = schedule_daily_work(state)
+    {:noreply, new_state}
   end
 
   # Could instead pattern match on the name.. but again, not
@@ -363,8 +371,9 @@ defmodule BudgetApp.BudgetServer do
   # env_variables based on a config variable set in this project.
   # Doubt it will be possible though.
   def handle_call({:get_account, name}, _from, state) do
-    state = increment_guest_serviced_requests(state, name)
-    {:reply, state, state}
+    new_state = increment_guest_serviced_requests(state, name)
+    update_ets_state(name, new_state)
+    {:reply, new_state, new_state}
   end
 
   def handle_call({:deposit, name, deposit_slip, current_date}, _from, state) do
@@ -377,9 +386,21 @@ defmodule BudgetApp.BudgetServer do
         {:reply, "Requests serviced exceeded.", state}
 
       state ->
-        state = increment_guest_serviced_requests(state, name)
-        new_state = Budget.deposit(state, deposit_slip, current_date)
-        {:reply, new_state, new_state}
+        # This could be pipelined.
+        IO.puts("WHY IS STATE TRUE IN DEPOSIT HANDLE CALL???")
+        IO.inspect(state)
+
+        case increment_guest_serviced_requests(state, name) do
+          false ->
+            {:reply, "invalid_request", state}
+
+          state ->
+            IO.puts("BEFORE DEPOSIT")
+            new_state = Budget.deposit(state, deposit_slip, current_date)
+            IO.puts("AFTER DEPOSIT")
+            update_ets_state(name, new_state)
+            {:reply, new_state, new_state}
+        end
     end
   end
 
@@ -389,12 +410,26 @@ defmodule BudgetApp.BudgetServer do
   # purpose of why I even set out to do this. Well.. not entirely, state won't be built
   # up nonstop, but DDoS is still something I need to determine how to prevent.
   defp authorize_request(state, "james.good@codeimmersives.com"), do: state
-  defp authorize_request(state, _guest_name), do: Budget.check_serviced_requests(state)
+
+  defp authorize_request(state, _guest_name) do
+    case Budget.check_serviced_requests(state) do
+      true ->
+        state
+
+      _ ->
+        false
+    end
+  end
 
   defp increment_guest_serviced_requests(state, "james.good@codeimmersives.com"), do: state
 
   defp increment_guest_serviced_requests(state, _guest_name),
     do: Budget.increment_serviced_requests(state)
+
+  # TODO: wrap this function to be called within another function that pattern matches on the response
+  # and then returns the new_state to facilitate pipelining.
+  defp update_ets_state(name, new_state),
+    do: :ets.insert(:budget_tracker_state, {name, new_state})
 
   # def handle_call({:set_budget, budget_limit}, _from, state) do
   #   new_state = Budget.set_budget(state, budget_limit)
@@ -407,9 +442,12 @@ defmodule BudgetApp.BudgetServer do
   # end
 end
 
-# import BudgetApp
-# BudgetApp.BudgetServer.start_link(:James)
-# BudgetApp.BudgetServer.deposit(:James, 1000)
+# :ets.lookup(:budget_tracker_state, "random@gmail.com")
+
+# alias BudgetApp.BudgetServer
+# BudgetServer.start_link("random@gmail.com")
+# BudgetServer.deposit("random@gmail.com", %{"income_source" => "check", "deposit_amount" => 400000}, {4, 2019})
+
 # BudgetApp.BudgetServer.create_unnecessary_expense(:James, 200)
 # BudgetApp.BudgetServer.set_budget(:James, 400)
 # BudgetApp.BudgetServer.create_unnecessary_expense(:James, 200) -> budget_exceeded: false

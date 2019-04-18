@@ -3,6 +3,7 @@ defmodule BudgetApp.Budget do
   alias Budget
 
   defstruct budget_tracker: %{
+              name: nil,
               current_month: nil,
               current_year: nil,
               limit_requests: false,
@@ -82,7 +83,7 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       %BudgetApp.Budget{
         budget_tracker: %{
           budget: %{
@@ -95,6 +96,7 @@ defmodule BudgetApp.Budget do
                 daily_timer: nil,
                 monthly_timer: nil
               },
+          name: "random@gmail.com",
           current_month: 3,
           current_year: 2019,
           limit_requests: false,
@@ -119,7 +121,7 @@ defmodule BudgetApp.Budget do
         }
       }
   """
-  def initialize_budget(budget, current_month, current_year) do
+  def initialize_budget(budget, name, current_month, current_year) do
     # The example I found that put me on the right path.
     # I suppose there's also an Access.key/2 that allows you to populate a dynamically
     # generated key with a default value.
@@ -192,6 +194,15 @@ defmodule BudgetApp.Budget do
         end
       )
 
+    {:ok, updated_budget} =
+      get_and_update_in(
+        updated_budget,
+        [Access.key!(:budget_tracker), Access.key!(:name)],
+        fn val ->
+          {:ok, name}
+        end
+      )
+
     updated_budget
   end
 
@@ -201,7 +212,7 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> BudgetApp.Budget.update_current_month_and_year(budget, 4, 2019)
       %BudgetApp.Budget{
         budget_tracker: %{
@@ -215,6 +226,7 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          name: "random@gmail.com",
           current_month: 4,
           current_year: 2019,
           limit_requests: false,
@@ -331,7 +343,7 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> BudgetApp.Budget.set_guest_restrictions(budget)
       %BudgetApp.Budget{
         budget_tracker: %{
@@ -345,6 +357,7 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          name: "random@gmail.com",
           current_month: 3,
           current_year: 2019,
           limit_requests: true,
@@ -383,7 +396,7 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
       iex> budget = BudgetApp.Budget.increment_serviced_requests(budget)
       %BudgetApp.Budget{
@@ -398,6 +411,7 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          name: "random@gmail.com",
           current_month: 3,
           current_year: 2019,
           limit_requests: true,
@@ -423,6 +437,9 @@ defmodule BudgetApp.Budget do
       }
   """
   def increment_serviced_requests(budget) do
+    IO.puts("THE BUDGET IN increment_serviced_requests")
+    IO.inspect(budget)
+
     {:ok, updated_budget_tracker} =
       get_and_update_in(
         budget,
@@ -442,7 +459,7 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
       iex> BudgetApp.Budget.check_serviced_requests(budget)
       true
@@ -471,7 +488,7 @@ defmodule BudgetApp.Budget do
 
       iex> budget = BudgetApp.Budget.create_account()
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> budget = BudgetApp.Budget.increment_serviced_requests(budget)
       iex> BudgetApp.Budget.reset_serviced_requests(budget)
       %BudgetApp.Budget{
@@ -486,6 +503,7 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          name: "random@gmail.com",
           current_month: 3,
           current_year: 2019,
           limit_requests: true,
@@ -526,9 +544,9 @@ defmodule BudgetApp.Budget do
   ## Examples
 
       iex> budget = BudgetApp.Budget.create_account()
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 3, 2019)
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 12, 2020)
-      iex> budget = BudgetApp.Budget.initialize_budget(budget, 1, 2021)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 12, 2020)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 1, 2021)
       iex> BudgetApp.Budget.deposit(budget, %{"income_source" => "check", "deposit_amount" => 50000}, {1, 2021})
       %BudgetApp.Budget{
         budget_tracker: %{
@@ -542,6 +560,7 @@ defmodule BudgetApp.Budget do
             daily_timer: nil,
             monthly_timer: nil
           },
+          name: "random@gmail.com",
           current_month: 1,
           current_year: 2021,
           limit_requests: false,

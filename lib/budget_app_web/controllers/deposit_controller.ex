@@ -21,7 +21,11 @@ defmodule BudgetAppWeb.DepositController do
     %{current_user: current_user} = conn.assigns
 
     %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
-      BudgetServer.deposit(current_user, params, {current_month, current_year})
+      BudgetServer.deposit(
+        current_user,
+        %{"income_source" => income_source, "deposit_amount" => deposit_amount},
+        {current_month, current_year}
+      )
 
     current_month_data = years_tracked[current_year].months_tracked[current_month]
 
@@ -36,15 +40,6 @@ defmodule BudgetAppWeb.DepositController do
       |> Poison.encode!()
 
     json(conn, json_resp)
-  end
-
-  @doc """
-    A DELETE to delete an existing deposit.
-  """
-  def delete(conn, _params) do
-    %{"id" => id} = conn.params
-    # A call to BudgetServer client function
-    json(conn, %{message: "You deposit delete it: #{id}"})
   end
 end
 
