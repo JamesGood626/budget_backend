@@ -2,6 +2,8 @@ defmodule BudgetApp.Budget do
   use Timex
   alias Budget
 
+  @increment "INCREMENT"
+
   defstruct budget_tracker: %{
               name: nil,
               current_month: nil,
@@ -615,75 +617,125 @@ defmodule BudgetApp.Budget do
   """
   def deposit(
         budget,
-        %{"income_source" => income_source, "deposit_amount" => deposit_amount} = deposit_slip,
+        %{"income_source" => income_source, "deposit_amount" => deposit_amount} =
+          transaction_slip,
         {current_month, current_year}
       ) do
+    update_account_balance(@increment, budget, deposit_amount)
+    |> update_monthly_total(
+      :total_deposited,
+      deposit_amount,
+      current_year,
+      current_month
+    )
+    |> update_monthly_list(:deposits, transaction_slip, current_year, current_month)
+  end
+
+  # Really just keeping this around for future reference
+  # year_key_list =
+  #   updated_budget.budget_tracker.years_tracked
+  #   |> Enum.map(fn {key, val} -> key end)
+  #   |> Enum.reverse()
+  # Gets the last month in the data structure to update total_deposited.
+  # current_year = List.first(year_key_list)
+
+  # month_key_list =
+  #   updated_budget.budget_tracker.years_tracked[current_year].months_tracked
+  #   |> Enum.map(fn {key, val} -> key end)
+  #   |> Enum.reverse()
+  # current_month = List.first(month_key_list)
+
+  def necessary_expense(
+        budget,
+        %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
+        {current_month, current_year}
+      ) do
+    update_account_balance(@decrement, budget, expense_amount)
+    |> update_monthly_total(
+      :total_necessary_expenses,
+      expense_amount,
+      current_year,
+      current_month
+    )
+    |> update_monthly_list(:necessary_expenses, transaction_slip, current_year, current_month)
+  end
+
+  def unnecessary_expense(
+        budget,
+        %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
+        {current_month, current_year}
+      ) do
+    update_account_balance(@decrement, budget, expense_amount)
+    |> update_monthly_total(
+      :total_unnecessary_expenses,
+      expense_amount,
+      current_year,
+      current_month
+    )
+    |> update_monthly_list(:unnecessary_expenses, transaction_slip, current_year, current_month)
+  end
+
+  defp update_account_balance(type, budget, amount) do
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
         [Access.key!(:budget_tracker), Access.key!(:budget), Access.key!(:account_balance)],
         fn val ->
-          {:ok, val + deposit_amount}
+          account_balance_crement(val, type, amount)
         end
       )
 
-    # Really just keeping this around for future reference
-    # year_key_list =
-    #   updated_budget.budget_tracker.years_tracked
-    #   |> Enum.map(fn {key, val} -> key end)
-    #   |> Enum.reverse()
-    # Gets the last month in the data structure to update total_deposited.
-    # current_year = List.first(year_key_list)
-
-    # month_key_list =
-    #   updated_budget.budget_tracker.years_tracked[current_year].months_tracked
-    #   |> Enum.map(fn {key, val} -> key end)
-    #   |> Enum.reverse()
-    # current_month = List.first(month_key_list)
-
-    {:ok, updated_budget} =
-      update_total_deposited(updated_budget, deposit_amount, current_year, current_month)
-
-    {:ok, updated_budget} =
-      update_deposits_list(updated_budget, deposit_slip, current_year, current_month)
-
-    IO.puts("THIS IS THE UPDATED BUDGET")
-    IO.inspect(updated_budget)
     updated_budget
   end
 
-  defp update_total_deposited(updated_budget, deposit_amount, current_year, current_month) do
-    get_and_update_in(
-      updated_budget,
-      [
-        Access.key!(:budget_tracker),
-        Access.key!(:years_tracked),
-        Access.key!(current_year),
-        Access.key!(:months_tracked),
-        Access.key!(current_month),
-        Access.key!(:total_deposited)
-      ],
-      fn val ->
-        {:ok, val + deposit_amount}
-      end
-    )
+  def account_balance_crement(val, type, amount) do
+    case type do
+      "INCREMENT" ->
+        {:ok, val + amount}
+
+      "DECREMENT" ->
+        {:ok, val - amount}
+    end
   end
 
-  defp update_deposits_list(budget, deposit_slip, current_year, current_month) do
-    get_and_update_in(
-      budget,
-      [
-        Access.key!(:budget_tracker),
-        Access.key!(:years_tracked),
-        Access.key!(current_year),
-        Access.key!(:months_tracked),
-        Access.key!(current_month),
-        Access.key!(:deposits)
-      ],
-      fn val ->
-        {:ok, [deposit_slip | val]}
-      end
-    )
+  defp update_monthly_total(budget, key, amount, current_year, current_month) do
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        [
+          Access.key!(:budget_tracker),
+          Access.key!(:years_tracked),
+          Access.key!(current_year),
+          Access.key!(:months_tracked),
+          Access.key!(current_month),
+          Access.key!(key)
+        ],
+        fn val ->
+          {:ok, val + amount}
+        end
+      )
+
+    updated_budget
+  end
+
+  defp update_monthly_list(budget, key, transaction_slip, current_year, current_month) do
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        [
+          Access.key!(:budget_tracker),
+          Access.key!(:years_tracked),
+          Access.key!(current_year),
+          Access.key!(:months_tracked),
+          Access.key!(current_month),
+          Access.key!(key)
+        ],
+        fn val ->
+          {:ok, [transaction_slip | val]}
+        end
+      )
+
+    updated_budget
   end
 
   # Change this to set the nested budget -> Can't handle this until
