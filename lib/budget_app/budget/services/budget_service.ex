@@ -3,6 +3,7 @@ defmodule BudgetApp.Budget do
   alias Budget
 
   @increment "INCREMENT"
+  @decrement "DECREMENT"
 
   defstruct budget_tracker: %{
               name: nil,
@@ -535,7 +536,7 @@ defmodule BudgetApp.Budget do
   end
 
   @doc """
-    The deposit/2 function is called inside of
+    The deposit/3 function is called inside of
     the BudgetServer GenServer module.
 
     The handle_call/2 which pattern matches on :deposit
@@ -645,6 +646,72 @@ defmodule BudgetApp.Budget do
   #   |> Enum.reverse()
   # current_month = List.first(month_key_list)
 
+  @doc """
+    The necessary_expense/3 function is called inside of
+    the BudgetServer GenServer module.
+
+    The handle_call/2 which pattern matches on :deposit
+    is where this function is called, and passes the budget
+    held in GenServer state, as well as a user entered amount to
+    update the account_balance state with.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 12, 2020)
+      iex> BudgetApp.Budget.necessary_expense(budget, %{"expense" => "phone", "expense_amount" => 10000}, {12, 2020})
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            current_budget: nil,
+            budget_set: false,
+            account_balance: -10000,
+            budget_exceeded: false,
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          name: "random@gmail.com",
+          current_month: 12,
+          current_year: 2020,
+          limit_requests: false,
+          request_limit: 0,
+          serviced_requests: 0,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            },
+            2020 => %{
+              months_tracked: %{
+                12 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [%{"expense" => "phone", "expense_amount" => 10000}],
+                  total_deposited: 0,
+                  total_necessary_expenses: 10000,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
+        }
+      }
+  """
   def necessary_expense(
         budget,
         %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
@@ -660,6 +727,72 @@ defmodule BudgetApp.Budget do
     |> update_monthly_list(:necessary_expenses, transaction_slip, current_year, current_month)
   end
 
+  @doc """
+    The necessary_expense/3 function is called inside of
+    the BudgetServer GenServer module.
+
+    The handle_call/2 which pattern matches on :deposit
+    is where this function is called, and passes the budget
+    held in GenServer state, as well as a user entered amount to
+    update the account_balance state with.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 12, 2020)
+      iex> BudgetApp.Budget.unnecessary_expense(budget, %{"expense" => "coffee", "expense_amount" => 500}, {12, 2020})
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            current_budget: nil,
+            budget_set: false,
+            account_balance: -500,
+            budget_exceeded: false,
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          name: "random@gmail.com",
+          current_month: 12,
+          current_year: 2020,
+          limit_requests: false,
+          request_limit: 0,
+          serviced_requests: 0,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            },
+            2020 => %{
+              months_tracked: %{
+                12 => %{
+                  budget: 0,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 500,
+                  unnecessary_expenses: [%{"expense" => "coffee", "expense_amount" => 500}]
+                }
+              }
+            }
+          }
+        }
+      }
+  """
   def unnecessary_expense(
         budget,
         %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
