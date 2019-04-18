@@ -3,11 +3,40 @@ defmodule BudgetAppWeb.NecessaryExpenseController do
   alias BudgetApp.BudgetServer
 
   @doc """
-    A POST to create a new deposit.
+    A POST to create a new necessary_expense.
   """
-  def create(conn, %{"expense" => expense, "amount" => amount} = params) do
-    # A call to BudgetServer client function
-    json(conn, %{message: "You deposit it #{expense}"})
+  def create(
+        conn,
+        %{
+          "expense" => expense,
+          "expense_amount" => expense_amount,
+          "current_month" => current_month,
+          "current_year" => current_year
+        } = params
+      ) do
+    # current_user is the user's email
+    %{current_user: current_user} = conn.assigns
+
+    %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
+      BudgetServer.necessary_expense(
+        current_user,
+        %{"expense" => expense, "expense_amount" => expense_amount},
+        {current_month, current_year}
+      )
+
+    current_month_data = years_tracked[current_year].months_tracked[current_month]
+
+    payload = %{
+      account_balance: budget.account_balance,
+      total_necessary_expenses: current_month_data.total_deposited,
+      necessary_expenses: current_month_data.deposits
+    }
+
+    json_resp =
+      payload
+      |> Poison.encode!()
+
+    json(conn, json_resp)
   end
 
   @doc """

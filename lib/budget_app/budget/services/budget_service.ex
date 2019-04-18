@@ -162,9 +162,6 @@ defmodule BudgetApp.Budget do
         end
       )
 
-    IO.puts("BUDGET SHOULD BE UPDATED W/ CURRENT_YEAR")
-    IO.inspect(updated_budget)
-
     updated_budget_tracker =
       put_in(
         updated_budget.budget_tracker,

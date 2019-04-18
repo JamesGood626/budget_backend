@@ -159,8 +159,16 @@ defmodule BudgetApp.BudgetServer do
     GenServer.call(via_tuple(name), {:get_account, name})
   end
 
-  def deposit(name, deposit_slip, current_date) do
-    GenServer.call(via_tuple(name), {:deposit, name, deposit_slip, current_date})
+  def deposit(name, transaction_slip, current_date) do
+    GenServer.call(via_tuple(name), {:deposit, name, transaction_slip, current_date})
+  end
+
+  def necessary_expense(name, transaction_slip, current_date) do
+    GenServer.call(via_tuple(name), {:necessary_expense, name, transaction_slip, current_date})
+  end
+
+  def unnecessary_expense(name, transaction_slip, current_date) do
+    GenServer.call(via_tuple(name), {:unnecessary_expense, name, transaction_slip, current_date})
   end
 
   def set_budget(name, budget_limit) do
@@ -216,12 +224,6 @@ defmodule BudgetApp.BudgetServer do
           state
       end
 
-    ##########
-    ## TODO ##
-    ##########
-    # You're currently setting newly initialized state,
-    # BUT you still need to pull from and update the ets table
-    # after user actions.
     update_ets_state(name, state)
     {:noreply, state}
   end
@@ -376,7 +378,10 @@ defmodule BudgetApp.BudgetServer do
     {:reply, new_state, new_state}
   end
 
-  def handle_call({:deposit, name, deposit_slip, current_date}, _from, state) do
+  # :deposit, :necessary_expense, and :unnecessary_expense could all use a refactor...
+  # much better would be to just create a helper function in the budget_serrvice that
+  # handles all of the stuff that's going on inside of the handle_call/3's
+  def handle_call({:deposit, name, transaction_slip, current_date}, _from, state) do
     # Possibly create a helper function for successful and failure cases
     # So that this case block may be used in a HOF where you pass those in as args
     # and whatever the return result from that is what gets returned from all
@@ -386,18 +391,59 @@ defmodule BudgetApp.BudgetServer do
         {:reply, "Requests serviced exceeded.", state}
 
       state ->
-        # This could be pipelined.
-        IO.puts("WHY IS STATE TRUE IN DEPOSIT HANDLE CALL???")
-        IO.inspect(state)
-
         case increment_guest_serviced_requests(state, name) do
           false ->
             {:reply, "invalid_request", state}
 
           state ->
-            IO.puts("BEFORE DEPOSIT")
-            new_state = Budget.deposit(state, deposit_slip, current_date)
-            IO.puts("AFTER DEPOSIT")
+            # This could be pipelined.
+            new_state = Budget.deposit(state, transaction_slip, current_date)
+            update_ets_state(name, new_state)
+            {:reply, new_state, new_state}
+        end
+    end
+  end
+
+  def handle_call({:necessary_expense, name, transaction_slip, current_date}, _from, state) do
+    # Possibly create a helper function for successful and failure cases
+    # So that this case block may be used in a HOF where you pass those in as args
+    # and whatever the return result from that is what gets returned from all
+    # handle calls.
+    case authorize_request(state, name) do
+      false ->
+        {:reply, "Requests serviced exceeded.", state}
+
+      state ->
+        case increment_guest_serviced_requests(state, name) do
+          false ->
+            {:reply, "invalid_request", state}
+
+          state ->
+            # This could be pipelined.
+            new_state = Budget.necessary_expense(state, transaction_slip, current_date)
+            update_ets_state(name, new_state)
+            {:reply, new_state, new_state}
+        end
+    end
+  end
+
+  def handle_call({:unnecessary_expense, name, transaction_slip, current_date}, _from, state) do
+    # Possibly create a helper function for successful and failure cases
+    # So that this case block may be used in a HOF where you pass those in as args
+    # and whatever the return result from that is what gets returned from all
+    # handle calls.
+    case authorize_request(state, name) do
+      false ->
+        {:reply, "Requests serviced exceeded.", state}
+
+      state ->
+        case increment_guest_serviced_requests(state, name) do
+          false ->
+            {:reply, "invalid_request", state}
+
+          state ->
+            # This could be pipelined.
+            new_state = Budget.unnecessary_expense(state, transaction_slip, current_date)
             update_ets_state(name, new_state)
             {:reply, new_state, new_state}
         end
@@ -445,8 +491,10 @@ end
 # :ets.lookup(:budget_tracker_state, "random@gmail.com")
 
 # alias BudgetApp.BudgetServer
-# BudgetServer.start_link("random@gmail.com")
+# {:ok, pid} = BudgetServer.start_link("random@gmail.com")
 # BudgetServer.deposit("random@gmail.com", %{"income_source" => "check", "deposit_amount" => 400000}, {4, 2019})
+# BudgetServer.unnecessary_expense("random@gmail.com", %{"expense" => "coffee", "expense_amount" => 500}, {4, 2019})
+# BudgetServer.necessary_expense("random@gmail.com", %{"expense" => "phone", "expense_amount" => 10000}, {4, 2019})
 
 # BudgetApp.BudgetServer.create_unnecessary_expense(:James, 200)
 # BudgetApp.BudgetServer.set_budget(:James, 400)
