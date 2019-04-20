@@ -1,6 +1,6 @@
 <div>
     <h2>You've been approved!</h2>
     <br/>
-    <p>Sign in here! <a href="www.google.com">The link</a></p>
+    <p>Sign in here! <a href="http://localhost:8000/app/login">The link</a></p>
 </div>
 

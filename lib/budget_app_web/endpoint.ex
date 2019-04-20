@@ -42,5 +42,6 @@ defmodule BudgetAppWeb.Endpoint do
     key: "_budget_app_key",
     signing_salt: "U2R58vA7"
 
+  plug CORSPlug, origin: ["http://localhost:8000"]
   plug BudgetAppWeb.Router
 end

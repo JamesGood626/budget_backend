@@ -54,28 +54,19 @@ defmodule BudgetAppWeb.AuthController do
   def login(conn, %{"email" => email, "password" => password}) do
     # TODO
     # Do the remember token stuff
-    user =
-      case CredentialServer.get_user(email) do
-        {:ok, user} ->
-          user
+    case CredentialServer.get_user(email) do
+      {:ok, user} ->
+        case AuthService.check_user_password(user, email, password) do
+          {:ok, session_data} ->
+            conn = put_session(conn, :session_token, session_data)
+            json(conn, %{message: "Login Success!"})
 
-        {:err, message} ->
-          json(conn, %{message: message})
-      end
+          {:err, message} ->
+            json(conn, %{message: message})
+        end
 
-    case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
-      true ->
-        # Generate remember token, set remember token in cookie, and send success response
-        remember_token = AuthService.generate_remember_token()
-        hashed_remember_token = AuthService.hash_remember_token(remember_token)
-        CredentialServer.add_hashed_remember_token(email, hashed_remember_token)
-        {:ok, user} = CredentialServer.get_user(email)
-        session_data = %{email: email, remember_token: remember_token}
-        conn = put_session(conn, :session_token, session_data)
-        json(conn, %{message: "Login Success!"})
-
-      false ->
-        json(conn, %{message: "Incorrect username or password!"})
+      {:err, message} ->
+        json(conn, %{message: message})
     end
   end
 
@@ -87,10 +78,10 @@ defmodule BudgetAppWeb.AuthController do
     %{email: email} = get_session(conn, :session_token)
 
     case CredentialServer.remove_hashed_remember_token(email) do
-      {:ok, msg} ->
+      {:ok, _msg} ->
         json(conn, %{message: "Logout Success!"})
 
-      {:err, msg} ->
+      {:err, _msg} ->
         json(conn, %{message: "Logout Failed!"})
     end
   end

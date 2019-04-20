@@ -3,6 +3,7 @@ defmodule BudgetApp.AuthService do
   # after I've confirmed that cookie signup/login flow works with these static values.
   @key "Thestrongestkeyever"
   @remember_token_bytes 32
+  alias BudgetApp.CredentialServer
 
   def generate_short_token do
     :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.url_encode64()
@@ -18,6 +19,22 @@ defmodule BudgetApp.AuthService do
 
   def hash_password(password) do
     Bcrypt.hash_pwd_salt(password)
+  end
+
+  def check_user_password(user, email, password) do
+    case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
+      true ->
+        # Generate remember token, set remember token in cookie, and send success response
+        remember_token = generate_remember_token()
+        hashed_remember_token = hash_remember_token(remember_token)
+        CredentialServer.add_hashed_remember_token(email, hashed_remember_token)
+        {:ok, user} = CredentialServer.get_user(email)
+        session_data = %{email: email, remember_token: remember_token}
+        {:ok, session_data}
+
+      false ->
+        {:err, "Incorrect username or password!"}
+    end
   end
 end
 
