@@ -52,13 +52,18 @@ defmodule BudgetAppWeb.AuthController do
   end
 
   def login(conn, %{"email" => email, "password" => password}) do
-    # TODO
-    # Do the remember token stuff
     case CredentialServer.get_user(email) do
       {:ok, user} ->
         case AuthService.check_user_password(user, email, password) do
           {:ok, session_data} ->
             conn = put_session(conn, :session_token, session_data)
+            # Remember to look into this. (Also a note left in auth.ex)
+            #   put_resp_cookie(conn, "token", session_data.remember_token,
+            #     # http_only: true,
+            #     # secure: true,
+            #     max_age: 604_800
+            #   )
+
             json(conn, %{message: "Login Success!"})
 
           {:err, message} ->

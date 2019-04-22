@@ -12,6 +12,8 @@ defmodule BudgetAppWeb.BudgetController do
   def index(conn, _params) do
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
+    IO.puts("THE CURRENT USER")
+    IO.inspect(current_user)
     %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
 
     %{
@@ -31,11 +33,12 @@ defmodule BudgetAppWeb.BudgetController do
     IO.puts("THIS IS WHAT'S GETTING ENCODED")
     IO.inspect(payload)
 
-    json_resp =
-      payload
-      |> Poison.encode!()
+    # Yeah this Poison.encode was unnecessary...
+    # json_resp =
+    #   payload
+    #   |> Poison.encode!()
 
-    json(conn, json_resp)
+    json(conn, payload)
   end
 
   @doc """

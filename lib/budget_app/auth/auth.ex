@@ -5,8 +5,21 @@ defmodule BudgetApp.Auth do
   alias BudgetApp.AuthService
 
   # halt isn't enough, need to send a json response.
+  # NOTE!!
+  # When I attempted to use put_resp_cookie/4 in the AuthController login
+  # function w/ options secure: true and httpOnly: true. -> axios
+  # withCredentials = true couldn't access the cookies to send what was
+  # set on the server in any future requests.
+  # However... when using put_session/3 axios can send what was set just fine..
+  # What is the underlying implementation of put_session/3?
   def authorize_user(conn, _opts) do
     %{email: email, remember_token: remember_token} = get_session(conn, :session_token)
+    IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
+    IO.inspect(email)
+    IO.inspect(remember_token)
+    # cookie = fetch_cookies(conn)
+    # IO.puts("RETRIEVED FROM fetch_cookies")
+    # IO.inspect(cookie)
 
     case CredentialServer.get_user(email) do
       {:ok, user} ->
