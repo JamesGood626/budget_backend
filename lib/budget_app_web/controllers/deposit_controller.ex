@@ -20,6 +20,19 @@ defmodule BudgetAppWeb.DepositController do
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
 
+    # TODO:
+    # Last left off w/ updating the return format to facilitate a payload of this structure:
+    # %{
+    #   category: "DEPOSIT",
+    #   type: "check",
+    #   account_balance: 1000,
+    #   amount: 2000,
+    #   date: transaction_timestamp()
+    # }
+    # Need to ensure that I destructure that off of the call to BudgetServer.deposit below
+    # As well as update the expense controllers to return a similar structure as well.
+    # This will actually require returning the entire Budget struct + the structure above
+    # from the budget service functions -> to save on nested retrieval.
     %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
       BudgetServer.deposit(
         current_user,
@@ -29,10 +42,15 @@ defmodule BudgetAppWeb.DepositController do
 
     current_month_data = years_tracked[current_year].months_tracked[current_month]
 
+    # This is the format that the client expects now.... This is what not planning ahead
+    # Gets ya.
     payload = %{
+      category: "DEPOSIT",
+      type: income_source,
       account_balance: budget.account_balance,
       total_deposited: current_month_data.total_deposited,
-      deposits: current_month_data.deposits
+      amount: deposit_amount,
+      date: Timex.now()
     }
 
     json_resp =

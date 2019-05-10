@@ -42,18 +42,21 @@ defmodule BudgetAppWeb.BudgetController do
   end
 
   @doc """
+    A POST to create set a new budget for the month.
+
+    DEPRECATED:
     A POST to create a new account with total initialized to 0.
   """
-  def create(conn, %{"name" => name} = params) do
-    name = String.to_atom(name)
+  def create(conn, %{"budget_amount" => budget_amount} = params) do
+    # name = String.to_atom(name)
 
-    case BudgetServer.start_link(name) do
-      {:ok, pid} ->
-        json(conn, %{message: "You created it"})
+    # case BudgetServer.start_link(name) do
+    #   {:ok, pid} ->
+    #     json(conn, %{message: "You created it"})
 
-      _ ->
-        json(conn, %{message: "You done fucked up"})
-    end
+    #   _ ->
+    #     json(conn, %{message: "You done fucked up"})
+    # end
   end
 end
 

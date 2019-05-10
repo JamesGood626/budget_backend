@@ -38,6 +38,14 @@ defmodule BudgetApp.Budget do
   # and current_year into the budget_monthly_interval_generator
   # function from within Budget.init/1 to reduce duplication.
 
+  def transaction_timestamp do
+    if Mix.env() === :test do
+      "test date"
+    else
+      Timex.now()
+    end
+  end
+
   def get_current_date do
     datetime = Timex.now()
     {datetime, datetime.month, datetime.year}
@@ -532,6 +540,9 @@ defmodule BudgetApp.Budget do
     put_in(budget.budget_tracker.serviced_requests, 0)
   end
 
+  # Deposits below before misplan
+  # deposits: [%{"income_source" => "check", "deposit_amount" => 50000}],
+
   @doc """
     The deposit/3 function is called inside of
     the BudgetServer GenServer module.
@@ -600,7 +611,13 @@ defmodule BudgetApp.Budget do
                 1 => %{
                   budget: 0,
                   budget_exceeded: false,
-                  deposits: [%{"income_source" => "check", "deposit_amount" => 50000}],
+                  deposits: [%{
+                    category: "DEPOSIT",
+                    type: "check",
+                    account_balance: 50000,
+                    amount: 50000,
+                    date: BudgetApp.Budget.transaction_timestamp()
+                  }],
                   necessary_expenses: [],
                   total_deposited: 50000,
                   total_necessary_expenses: 0,
@@ -615,10 +632,16 @@ defmodule BudgetApp.Budget do
   """
   def deposit(
         budget,
-        %{"income_source" => income_source, "deposit_amount" => deposit_amount} =
-          transaction_slip,
+        %{"income_source" => income_source, "deposit_amount" => deposit_amount},
         {current_month, current_year}
       ) do
+    monthly_list_item_payload = %{
+      category: "DEPOSIT",
+      type: income_source,
+      amount: deposit_amount,
+      date: transaction_timestamp()
+    }
+
     update_account_balance(@increment, budget, deposit_amount)
     |> update_monthly_total(
       :total_deposited,
@@ -626,7 +649,7 @@ defmodule BudgetApp.Budget do
       current_year,
       current_month
     )
-    |> update_monthly_list(:deposits, transaction_slip, current_year, current_month)
+    |> update_monthly_list(:deposits, monthly_list_item_payload, current_year, current_month)
   end
 
   # Really just keeping this around for future reference
@@ -642,6 +665,9 @@ defmodule BudgetApp.Budget do
   #   |> Enum.map(fn {key, val} -> key end)
   #   |> Enum.reverse()
   # current_month = List.first(month_key_list)
+
+  # Old return format (client relies on updated version)
+  # necessary_expenses: [%{"expense" => "phone", "expense_amount" => 10000}],
 
   @doc """
     The necessary_expense/3 function is called inside of
@@ -697,7 +723,13 @@ defmodule BudgetApp.Budget do
                   budget: 0,
                   budget_exceeded: false,
                   deposits: [],
-                  necessary_expenses: [%{"expense" => "phone", "expense_amount" => 10000}],
+                 necessary_expenses: [%{
+                    category: "NECESSARY_EXPENSE",
+                    type: "phone",
+                    account_balance: -10000,
+                    amount: 10000,
+                    date: BudgetApp.Budget.transaction_timestamp()
+                  }],
                   total_deposited: 0,
                   total_necessary_expenses: 10000,
                   total_unnecessary_expenses: 0,
@@ -714,6 +746,13 @@ defmodule BudgetApp.Budget do
         %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
         {current_month, current_year}
       ) do
+    monthly_list_item_payload = %{
+      category: "NECESSARY_EXPENSE",
+      type: expense,
+      amount: expense_amount,
+      date: transaction_timestamp()
+    }
+
     update_account_balance(@decrement, budget, expense_amount)
     |> update_monthly_total(
       :total_necessary_expenses,
@@ -721,8 +760,16 @@ defmodule BudgetApp.Budget do
       current_year,
       current_month
     )
-    |> update_monthly_list(:necessary_expenses, transaction_slip, current_year, current_month)
+    |> update_monthly_list(
+      :necessary_expenses,
+      monthly_list_item_payload,
+      current_year,
+      current_month
+    )
   end
+
+  # Again old format due to client needing different format
+  # unnecessary_expenses: [%{"expense" => "coffee", "expense_amount" => 500}]
 
   @doc """
     The necessary_expense/3 function is called inside of
@@ -782,7 +829,13 @@ defmodule BudgetApp.Budget do
                   total_deposited: 0,
                   total_necessary_expenses: 0,
                   total_unnecessary_expenses: 500,
-                  unnecessary_expenses: [%{"expense" => "coffee", "expense_amount" => 500}]
+                  unnecessary_expenses: [%{
+                    category: "UNNECESSARY_EXPENSE",
+                    type: "coffee",
+                    account_balance: -500,
+                    amount: 500,
+                    date: BudgetApp.Budget.transaction_timestamp()
+                  }],
                 }
               }
             }
@@ -795,6 +848,13 @@ defmodule BudgetApp.Budget do
         %{"expense" => expense, "expense_amount" => expense_amount} = transaction_slip,
         {current_month, current_year}
       ) do
+    monthly_list_item_payload = %{
+      category: "UNNECESSARY_EXPENSE",
+      type: expense,
+      amount: expense_amount,
+      date: transaction_timestamp()
+    }
+
     update_account_balance(@decrement, budget, expense_amount)
     |> update_monthly_total(
       :total_unnecessary_expenses,
@@ -802,7 +862,12 @@ defmodule BudgetApp.Budget do
       current_year,
       current_month
     )
-    |> update_monthly_list(:unnecessary_expenses, transaction_slip, current_year, current_month)
+    |> update_monthly_list(
+      :unnecessary_expenses,
+      monthly_list_item_payload,
+      current_year,
+      current_month
+    )
   end
 
   defp update_account_balance(type, budget, amount) do
@@ -849,6 +914,14 @@ defmodule BudgetApp.Budget do
   end
 
   defp update_monthly_list(budget, key, transaction_slip, current_year, current_month) do
+    transaction_slip =
+      Map.put_new(
+        transaction_slip,
+        :account_balance,
+        # the first budget is really the top level struct...
+        budget.budget_tracker.budget.account_balance
+      )
+
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
