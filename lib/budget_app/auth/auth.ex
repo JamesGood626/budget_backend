@@ -49,6 +49,10 @@ defmodule BudgetApp.Auth do
         %{"hashed_remember_token" => hashed_remember_token} = user,
         remember_token
       ) do
+    IO.puts("incoming hashed token:")
+    IO.inspect(AuthService.hash_remember_token(remember_token))
+    IO.puts("stored hashed token:")
+    IO.inspect(hashed_remember_token)
     AuthService.hash_remember_token(remember_token) === hashed_remember_token
   end
 

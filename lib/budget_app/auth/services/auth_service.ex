@@ -24,6 +24,7 @@ defmodule BudgetApp.AuthService do
   def check_user_password(user, email, password) do
     case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
       true ->
+        # TODO: remember to invalidate token after a certain amount of time has elapsed.
         # Generate remember token, set remember token in cookie, and send success response
         remember_token = generate_remember_token()
         hashed_remember_token = hash_remember_token(remember_token)
