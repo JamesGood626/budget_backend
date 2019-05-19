@@ -1,31 +1,31 @@
-defmodule BudgetAppWeb.DepositControllerTest do
+defmodule BudgetAppWeb.NecessaryExpenseControllerTest do
   use BudgetAppWeb.ConnCase
   alias BudgetApp.AuthService
   alias BudgetApp.{BudgetServer}
   alias BudgetApp.{CredentialServer}
 
-  @guest_account "deposit@gmail.com"
+  @guest_account "necessary_exp@gmail.com"
   @credentials %{
-    "email" => "deposit@gmail.com",
+    "email" => "necessary_exp@gmail.com",
     "password" => AuthService.hash_password("password11"),
     "active" => false
   }
   @login_input %{
-    "email" => "deposit@gmail.com",
+    "email" => "necessary_exp@gmail.com",
     "password" => "password11"
   }
-  @deposit_input %{
-    "income_source" => "Check",
-    "deposit_amount" => 400_000,
+  @necessary_expense_input %{
+    "expense" => "Rent",
+    "amount" => 90000,
     "current_month" => 5,
     "current_year" => 2019
   }
-  @deposit_post_result %{
-    "account_balance" => 400_000,
-    "amount" => 400_000,
-    "category" => "DEPOSIT",
-    "total_deposited" => 400_000,
-    "type" => "Check"
+  @necessary_expense_post_result %{
+    "category" => "NECESSARY_EXPENSE",
+    "type" => "Rent",
+    "account_balance" => -90000,
+    "amount" => 90000,
+    "total_necessary_expenses" => 90000
   }
 
   setup_all do
@@ -34,12 +34,12 @@ defmodule BudgetAppWeb.DepositControllerTest do
     CredentialServer.activate_user(@credentials["email"])
   end
 
-  test "POST /api/deposit", %{conn: conn} do
+  test "POST /api/necessary-expense", %{conn: conn} do
     conn = post(conn, "/api/login", @login_input)
-    conn = post(conn, "/api/deposit", @deposit_input)
+    conn = post(conn, "/api/necessary-expense", @necessary_expense_input)
 
     # Not testing that date is on the response currently
     # But it is there.
-    assert @deposit_post_result = json_response(conn, 200)
+    assert @necessary_expense_post_result = json_response(conn, 200)
   end
 end

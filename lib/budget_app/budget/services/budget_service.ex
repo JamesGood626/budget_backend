@@ -406,7 +406,7 @@ defmodule BudgetApp.Budget do
       iex> budget = BudgetApp.Budget.create_account()
       iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
-      iex> budget = BudgetApp.Budget.increment_serviced_requests(budget)
+      iex> BudgetApp.Budget.increment_serviced_requests(budget)
       %BudgetApp.Budget{
         budget_tracker: %{
           budget: %{

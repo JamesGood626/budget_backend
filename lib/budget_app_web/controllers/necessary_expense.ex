@@ -2,6 +2,9 @@ defmodule BudgetAppWeb.NecessaryExpenseController do
   use BudgetAppWeb, :controller
   alias BudgetApp.BudgetServer
 
+  import BudgetApp.Auth
+  plug :authorize_user
+
   @doc """
     A POST to create a new necessary_expense.
   """
@@ -27,9 +30,12 @@ defmodule BudgetAppWeb.NecessaryExpenseController do
     current_month_data = years_tracked[current_year].months_tracked[current_month]
 
     payload = %{
+      category: "NECESSARY_EXPENSE",
+      type: expense,
       account_balance: budget.account_balance,
-      total_necessary_expenses: current_month_data.total_deposited,
-      necessary_expenses: current_month_data.deposits
+      total_necessary_expenses: current_month_data.total_necessary_expenses,
+      amount: expense_amount,
+      date: Timex.now()
     }
 
     # json_resp =

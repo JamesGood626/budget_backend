@@ -2,6 +2,9 @@ defmodule BudgetAppWeb.UnnecessaryExpenseController do
   use BudgetAppWeb, :controller
   alias BudgetApp.BudgetServer
 
+  import BudgetApp.Auth
+  plug :authorize_user
+
   @doc """
     A POST to create a new unnecessary_expense.
   """
