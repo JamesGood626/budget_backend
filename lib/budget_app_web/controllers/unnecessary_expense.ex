@@ -21,7 +21,7 @@ defmodule BudgetAppWeb.UnnecessaryExpenseController do
     %{current_user: current_user} = conn.assigns
 
     %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
-      BudgetServer.necessary_expense(
+      BudgetServer.unnecessary_expense(
         current_user,
         %{"expense" => expense, "expense_amount" => expense_amount},
         {current_month, current_year}
@@ -30,9 +30,12 @@ defmodule BudgetAppWeb.UnnecessaryExpenseController do
     current_month_data = years_tracked[current_year].months_tracked[current_month]
 
     payload = %{
+      category: "UNNECESSARY_EXPENSE",
+      type: expense,
       account_balance: budget.account_balance,
-      total_unnecessary_expenses: current_month_data.total_deposited,
-      unnecessary_expenses: current_month_data.deposits
+      total_unnecessary_expenses: current_month_data.total_unnecessary_expenses,
+      amount: expense_amount,
+      date: Timex.now()
     }
 
     # json_resp =
