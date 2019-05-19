@@ -6,6 +6,7 @@ defmodule BudgetAppWeb.AuthController do
   alias BudgetApp.Email
 
   def signup(conn, %{"email" => email, "password" => password} = params) do
+    IO.puts("SIGNUP ROUTE HIT")
     # All of these should really be delegated to some service functions.
     case CredentialServer.get_user(email) do
       {:ok, _user} ->
@@ -63,7 +64,6 @@ defmodule BudgetAppWeb.AuthController do
             #     # secure: true,
             #     max_age: 604_800
             #   )
-
             json(conn, %{message: "Login Success!"})
 
           {:err, message} ->

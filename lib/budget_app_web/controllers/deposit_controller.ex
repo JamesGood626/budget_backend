@@ -17,6 +17,7 @@ defmodule BudgetAppWeb.DepositController do
           "current_year" => current_year
         } = params
       ) do
+    IO.puts("POST TO DEPOSIT")
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
 
@@ -53,15 +54,15 @@ defmodule BudgetAppWeb.DepositController do
       date: Timex.now()
     }
 
-    json_resp =
-      payload
-      |> Poison.encode!()
+    # json_resp =
+    #   payload
+    #   |> Poison.encode!()
 
-    json(conn, json_resp)
+    json(conn, payload)
   end
 end
 
-# In this case /api/account is our resource
+# In this case /api/deposit is our resource
 
 # review_path  GET     /admin/reviews           HelloWeb.Admin.ReviewController :index
 # review_path  GET     /admin/reviews/:id/edit  HelloWeb.Admin.ReviewController :edit

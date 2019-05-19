@@ -2,15 +2,19 @@ defmodule CredentialServerTest do
   use ExUnit.Case, async: true
   alias BudgetApp.{CredentialServer}
 
-  @credentials %{"email" => "jamesgood626@gmail.com", "password" => "test1234", "active" => false}
+  @credentials %{
+    "email" => "jamesgood626@gmail.com",
+    "password" => "password11",
+    "active" => false
+  }
   @credentials_active %{
     "jamesgood626@gmail.com" => %{
       "active" => true,
       "email" => "jamesgood626@gmail.com",
-      "password" => "test1234"
+      "password" => "password11"
     }
   }
-  @credentials_dos %{"email" => "random@gmail.com", "password" => "test1234"}
+  @credentials_dos %{"email" => "random@gmail.com", "password" => "password11"}
   # alias BudgetApp.CredentialServer
   # CredentialServer.start_link(%{})
   # credentials = %{email: "jamesgood626@gmail.com", password: "test1234"}

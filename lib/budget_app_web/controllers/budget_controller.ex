@@ -10,6 +10,7 @@ defmodule BudgetAppWeb.BudgetController do
     A GET to retrieve an existing account
   """
   def index(conn, _params) do
+    # TODO: REFACTOR THIS FROM OUT OF THE CONTROLLER!!!!
     # current_user is the user's email
     %{current_user: current_user} = conn.assigns
     IO.puts("THE CURRENT USER")
@@ -30,33 +31,7 @@ defmodule BudgetAppWeb.BudgetController do
       current_year: current_year
     }
 
-    IO.puts("THIS IS WHAT'S GETTING ENCODED")
-    IO.inspect(payload)
-
-    # Yeah this Poison.encode was unnecessary...
-    # json_resp =
-    #   payload
-    #   |> Poison.encode!()
-
     json(conn, payload)
-  end
-
-  @doc """
-    A POST to create set a new budget for the month.
-
-    DEPRECATED:
-    A POST to create a new account with total initialized to 0.
-  """
-  def create(conn, %{"budget_amount" => budget_amount} = params) do
-    # name = String.to_atom(name)
-
-    # case BudgetServer.start_link(name) do
-    #   {:ok, pid} ->
-    #     json(conn, %{message: "You created it"})
-
-    #   _ ->
-    #     json(conn, %{message: "You done fucked up"})
-    # end
   end
 end
 

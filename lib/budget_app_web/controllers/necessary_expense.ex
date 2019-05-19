@@ -9,7 +9,7 @@ defmodule BudgetAppWeb.NecessaryExpenseController do
         conn,
         %{
           "expense" => expense,
-          "expense_amount" => expense_amount,
+          "amount" => expense_amount,
           "current_month" => current_month,
           "current_year" => current_year
         } = params
@@ -32,11 +32,11 @@ defmodule BudgetAppWeb.NecessaryExpenseController do
       necessary_expenses: current_month_data.deposits
     }
 
-    json_resp =
-      payload
-      |> Poison.encode!()
+    # json_resp =
+    #   payload
+    #   |> Poison.encode!()
 
-    json(conn, json_resp)
+    json(conn, payload)
   end
 
   @doc """
