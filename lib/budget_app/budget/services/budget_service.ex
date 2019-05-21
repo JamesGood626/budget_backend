@@ -966,23 +966,6 @@ defmodule BudgetApp.Budget do
   # be sure to add to the total_deposited as well.
   #   end
 
-  ###############
-  ## DEPRECATE ##
-  ###############
-  #   def create_unnecessary_expense(%{budget_set: true} = budget, amount) do
-  #     new_total = budget.total - amount
-  #     new_unnecessary_expense_total = budget.unnecessary_expense_total + amount
-  #     budget_exceeded = new_unnecessary_expense_total > budget.budget_limit
-
-  #     %BudgetApp.Budget{
-  #       budget
-  #       | total: new_total,
-  #         unnecessary_expense_total: new_unnecessary_expense_total,
-  #         budget_exceeded: budget_exceeded
-  #     }
-  #   end
-
-  # This kind of logic would be perfect to use property based testing on...
   defp get_next_month(current_month) do
     if current_month < 12 do
       current_month + 1

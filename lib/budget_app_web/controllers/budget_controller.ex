@@ -33,6 +33,28 @@ defmodule BudgetAppWeb.BudgetController do
 
     json(conn, payload)
   end
+
+  @doc """
+    A POST to create a new monthly budget
+  """
+  def create(
+        conn,
+        %{
+          "budget_amount" => budget_amount,
+          "current_month" => current_month,
+          "current_year" => current_year
+        } = params
+      ) do
+    %{current_user: current_user} = conn.assigns
+    %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
+
+    payload = %{
+      message: "Successfully set your budget for the month.",
+      budget_amount: 100_000
+    }
+
+    json(conn, payload)
+  end
 end
 
 # In this case /api/account is our resource

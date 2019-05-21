@@ -5,6 +5,14 @@ defmodule BudgetAppWeb.DepositController do
   import BudgetApp.Auth
   plug :authorize_user
 
+  # TODO:
+  # 1. Determine why quest account requests aren't being
+  #    incremented despire being serviced by the Budget GenServer
+  # 2. Implement the set_budget function in budget_service.ex
+  #    and corresponding Budget GenServer handler
+  # 3. After two is done. Implement the react reducer to add
+  #    that budget into the nested month data so that a total
+  #    may be calculated for the Aggregated Budget:
   @doc """
     A POST to create a new deposit.
   """
