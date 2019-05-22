@@ -133,6 +133,7 @@ defmodule BudgetApp.Budget do
       }
   """
   def initialize_budget(budget, name, current_month, current_year) do
+    # LISTEN!
     # The example I found that put me on the right path.
     # I suppose there's also an Access.key/2 that allows you to populate a dynamically
     # generated key with a default value.
@@ -142,7 +143,7 @@ defmodule BudgetApp.Budget do
     # put_in(map_three, Enum.map([current_year, :b, :c], &Access.key(&1, %{})), 42)
     # %{2019 => %{b: %{c: 42}}}
 
-    # This function could use some refactoring... But later.
+    # This function disgusts me.
     nested_budget_info = %{
       budget: 0,
       total_deposited: 0,
@@ -874,7 +875,7 @@ defmodule BudgetApp.Budget do
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
-        [Access.key!(:budget_tracker), Access.key!(:budget), Access.key!(:account_balance)],
+        reference_nested(:account_balance),
         fn val ->
           account_balance_crement(val, type, amount)
         end
@@ -897,14 +898,7 @@ defmodule BudgetApp.Budget do
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
-        [
-          Access.key!(:budget_tracker),
-          Access.key!(:years_tracked),
-          Access.key!(current_year),
-          Access.key!(:months_tracked),
-          Access.key!(current_month),
-          Access.key!(key)
-        ],
+        reference_nested(current_year, current_month, key),
         fn val ->
           {:ok, val + amount}
         end
@@ -925,14 +919,7 @@ defmodule BudgetApp.Budget do
     {:ok, updated_budget} =
       get_and_update_in(
         budget,
-        [
-          Access.key!(:budget_tracker),
-          Access.key!(:years_tracked),
-          Access.key!(current_year),
-          Access.key!(:months_tracked),
-          Access.key!(current_month),
-          Access.key!(key)
-        ],
+        reference_nested(current_year, current_month, key),
         fn val ->
           {:ok, [transaction_slip | val]}
         end
@@ -1015,7 +1002,7 @@ defmodule BudgetApp.Budget do
     {:ok, updated_budget} =
       get_and_update_in(
         updated_budget,
-        reference_nested(:years_tracked, current_year, :months_tracked, current_month, :budget),
+        reference_nested(current_year, current_month, :budget),
         fn val ->
           {:ok, budget_amount}
         end
@@ -1024,22 +1011,28 @@ defmodule BudgetApp.Budget do
     updated_budget
   end
 
-  def reference_nested(:current_budget),
-    do: [
+  def reference_nested(:account_balance) do
+    [Access.key!(:budget_tracker), Access.key!(:budget), Access.key!(:account_balance)]
+  end
+
+  def reference_nested(:current_budget) do
+    [
       Access.key!(:budget_tracker),
       Access.key!(:budget),
       Access.key!(:current_budget)
     ]
+  end
 
-  def reference_nested(:budget_set),
-    do: [
+  def reference_nested(:budget_set) do
+    [
       Access.key!(:budget_tracker),
       Access.key!(:budget),
       Access.key!(:budget_set)
     ]
+  end
 
-  def reference_nested(:years_tracked, year, :months_tracked, month, :budget),
-    do: [
+  def reference_nested(year, month, :budget) do
+    [
       Access.key!(:budget_tracker),
       Access.key!(:years_tracked),
       Access.key!(year),
@@ -1047,6 +1040,18 @@ defmodule BudgetApp.Budget do
       Access.key!(month),
       Access.key!(:budget)
     ]
+  end
+
+  def reference_nested(year, month, key) do
+    [
+      Access.key!(:budget_tracker),
+      Access.key!(:years_tracked),
+      Access.key!(year),
+      Access.key!(:months_tracked),
+      Access.key!(month),
+      Access.key!(key)
+    ]
+  end
 
   # Probably won't need the second function clause and can just change the first arg
   # to be budget for this one.
