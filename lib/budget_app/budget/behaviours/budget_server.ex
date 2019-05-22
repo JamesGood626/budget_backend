@@ -158,8 +158,8 @@ defmodule BudgetApp.BudgetServer do
     GenServer.call(via_tuple(name), {:unnecessary_expense, name, transaction_slip, current_date})
   end
 
-  def set_budget(name, budget_limit) do
-    GenServer.call(via_tuple(name), {:set_budget, budget_limit})
+  def set_budget(name, budget_limit, current_month, current_year) do
+    GenServer.call(via_tuple(name), {:set_budget, budget_limit, current_month, current_year})
   end
 
   # Add date as an arg

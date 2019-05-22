@@ -46,11 +46,15 @@ defmodule BudgetAppWeb.BudgetController do
         } = params
       ) do
     %{current_user: current_user} = conn.assigns
-    %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
+
+    %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
+      BudgetServer.set_budget(current_user, budget_amount, current_month, current_year)
 
     payload = %{
       message: "Successfully set your budget for the month.",
-      budget_amount: 100_000
+      current_month: current_month,
+      updated_month_data: years_tracked[current_year][:months_tracked][current_month],
+      budget: budget
     }
 
     json(conn, payload)
