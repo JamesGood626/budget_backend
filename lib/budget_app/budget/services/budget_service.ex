@@ -25,8 +25,8 @@ defmodule BudgetApp.Budget do
               years_tracked: %{}
             }
 
-  # budget_limit will remain the same unless user updates it.
-  # But budget_limit may only be edited once a month. Make commitments.
+  #  current_budget will remain the same unless user updates it.
+  # But  current_budget may only be edited once a month. Make commitments.
   # LAST FEATURE TO ADD:
   # Add a budget interval for the GenServer to send a budget_interval reset (handle_info)
   # Which will modify the GenServer's state and reset :budget_exceeded to false
@@ -941,11 +941,112 @@ defmodule BudgetApp.Budget do
     updated_budget
   end
 
-  # Change this to set the nested budget -> Can't handle this until
-  # I refactor to create the initial set up
-  #   def set_budget(budget, budget_limit) do
-  #     %BudgetApp.Budget{budget | budget_limit: budget_limit, budget_set: true}
-  #   end
+  @doc """
+    The necessary_expense/3 function is called inside of
+    the BudgetServer GenServer module.
+
+    The handle_call/2 which pattern matches on :deposit
+    is where this function is called, and passes the budget
+    held in GenServer state, as well as a user entered amount to
+    update the account_balance state with.
+
+  ## Examples
+
+      iex> budget = BudgetApp.Budget.create_account()
+      iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
+      iex> BudgetApp.Budget.set_budget(budget, 60000, 3, 2019)
+      %BudgetApp.Budget{
+        budget_tracker: %{
+          budget: %{
+            current_budget: 60000,
+            budget_set: true,
+            account_balance: 0,
+            budget_exceeded: false,
+          },
+          timers: %{
+            daily_timer: nil,
+            monthly_timer: nil
+          },
+          name: "random@gmail.com",
+          current_month: 3,
+          current_year: 2019,
+          limit_requests: false,
+          request_limit: 0,
+          serviced_requests: 0,
+          years_tracked: %{
+            2019 => %{
+              months_tracked: %{
+                3 => %{
+                  budget: 60000,
+                  budget_exceeded: false,
+                  deposits: [],
+                  necessary_expenses: [],
+                  total_deposited: 0,
+                  total_necessary_expenses: 0,
+                  total_unnecessary_expenses: 0,
+                  unnecessary_expenses: []
+                }
+              }
+            }
+          }
+        }
+      }
+  """
+  def set_budget(budget, budget_amount, current_month, current_year) do
+    # Is there a better way -_-
+    {:ok, updated_budget} =
+      get_and_update_in(
+        budget,
+        reference_nested(:current_budget),
+        fn val ->
+          {:ok, budget_amount}
+        end
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        updated_budget,
+        reference_nested(:budget_set),
+        fn val ->
+          {:ok, true}
+        end
+      )
+
+    {:ok, updated_budget} =
+      get_and_update_in(
+        updated_budget,
+        reference_nested(:years_tracked, current_year, :months_tracked, current_month, :budget),
+        fn val ->
+          {:ok, budget_amount}
+        end
+      )
+
+    updated_budget
+  end
+
+  def reference_nested(:current_budget),
+    do: [
+      Access.key!(:budget_tracker),
+      Access.key!(:budget),
+      Access.key!(:current_budget)
+    ]
+
+  def reference_nested(:budget_set),
+    do: [
+      Access.key!(:budget_tracker),
+      Access.key!(:budget),
+      Access.key!(:budget_set)
+    ]
+
+  def reference_nested(:years_tracked, year, :months_tracked, month, :budget),
+    do: [
+      Access.key!(:budget_tracker),
+      Access.key!(:years_tracked),
+      Access.key!(year),
+      Access.key!(:months_tracked),
+      Access.key!(month),
+      Access.key!(:budget)
+    ]
 
   # Probably won't need the second function clause and can just change the first arg
   # to be budget for this one.

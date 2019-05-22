@@ -5,19 +5,9 @@ defmodule BudgetApp.BudgetServer do
   alias BudgetApp.Budget
 
   @daily_interval 60 * 60 * 24
-  # New considerations... Just handle account creation by doing an email request to my email.
-  # Additionally, introduce authentication so that a session cookie with the name of the account
-  # will be available in the controllers, so that it may be passed in to the entry function for the
-  # business logic.
   # Mar 19th TODO:
   #  - Finish testing GenServer behavior
   #  - Create more robust ETS set
-  #  - Test supervision of GenServer processes/fail states/reinitialized successfully.
-  # To minimize race condition chances -> Make it so that
-  # a user may only make a deposit/expense if the budget has been set.
-  # That way fresh state won't be able to be modified and succeed, then we can
-  # send back a message to the user that the update wasn't applied.
-  # BUT... is all this really worth it?
 
   # LAST LEFT OFF testing deposit.
   # STILL NEED TO ADD LOGIC IN THE BudgetApp.Budget.deposit/2 function
@@ -81,8 +71,6 @@ defmodule BudgetApp.BudgetServer do
               necessary_expenses: [
                 %{
                   expense_type: 'Rent',
-                  # That's New York for ya (also, prob do the cents representation for monies)
-                  # so 3600 * 100 = 360000 i.e. 3600.00 <- figure how to format with decimal in elixir
                   amount: 360000
                 }
               ],
@@ -124,7 +112,6 @@ defmodule BudgetApp.BudgetServer do
       }
     }
   """
-  # This was the bane of my existence for a two days or so.
   # When attempting to set up a Supervisor that could dynamically
   # spawn GenServer processes as children.... This function was being
   # called after calling Supervisor.start_link
@@ -149,7 +136,7 @@ defmodule BudgetApp.BudgetServer do
 
   # FOR MAKING ETS WORK I'LL ALWAYS NEED ACCESS TO THE NAME OF THE ACCOUNT
   # WHICH WAS JUST UPDATED.
-  # It would be ideal to handle this in one location... To do something like that
+  # It would be ideal to handle this in one location...
   # I think the only option would be to create a helper function inside the
   # BudgetApp.Budget module which all functions in that module will call just before
   # returning their output.
@@ -243,20 +230,6 @@ defmodule BudgetApp.BudgetServer do
     # If you're not James or Guest... You shall not pass!
     IO.puts("check_guest_account running!!!!!!")
 
-    # Old impl.
-    # case name do
-    #   "Guest" ->
-    #     {state} = schedule_daily_work(state)
-    #     Budget.set_guest_restrictions(state)
-
-    #   "James" ->
-    #     state
-
-    #   _ ->
-    #     IO.puts("SHUTTING IT DOWN!")
-    #     Process.exit(self(), :shutdown)
-    # end
-
     case name do
       "james.good@codeimmersives.com" ->
         state
@@ -272,15 +245,6 @@ defmodule BudgetApp.BudgetServer do
         new_state
     end
   end
-
-  # The init function from function-web-development-with-elixir book
-  # They allow init to initialize the state,
-  # by creating the state in the second argument to GenServer.start_link/3
-  # def init(name) do
-  #   player1 = %{name: name, board: Board.new(), guesses: Guesses.new()}
-  #   player2 = %{name: nil, board: Board.new(), guesses: Guesses.new()}
-  #   {:ok, %{player1: player1, player2: player2, rules: %Rules{}}}
-  # end
 
   @doc """
     Pulling off current_year and year because current_year will be used for
@@ -336,13 +300,9 @@ defmodule BudgetApp.BudgetServer do
     end
   end
 
-  # THIS IS WHERE YOU LEFT OFF.... DO WORK.
-  # Before doing work, it has occured to me that there are a few things
-  # which I should probably add to state in order to achieve the desired
-  # resulting system:
-  #     - Should I create a key or something for each thing that's created
-  #     - so that the created resource may be undone?
-  #     - However, as far as preventing DDoS goes, this approach will not be sufficient. <- Research
+  # TODO: Determine best way to test this kind of interval../
+  #       Figure it would require a refactor such that you dependency
+  #       inject the interval.
   def handle_info({:reset_budget_interval, next_month, next_year}, state) do
     # Use next_month and next_year to add updated state for the new
     # Create new year and month in years_tracked/months_tracked
@@ -350,9 +310,6 @@ defmodule BudgetApp.BudgetServer do
     # Reset budget_exceeded to false
     # Reset transactions_total
 
-    IO.puts("THE HANDLE INTERVAL TRIGGERED")
-    IO.inspect(next_month)
-    IO.inspect(next_year)
     # Reschdule once more
     state = schedule_monthly_work(state)
 
@@ -362,7 +319,6 @@ defmodule BudgetApp.BudgetServer do
 
   def handle_info(:reset_serviced_requests, state) do
     IO.puts("THE :reset_serviced_requests handle_info TRIGGERED")
-    # IO.inspect(state)
     Budget.reset_serviced_requests(state)
     new_state = schedule_daily_work(state)
     {:noreply, new_state}
@@ -375,6 +331,11 @@ defmodule BudgetApp.BudgetServer do
   def handle_call({:get_account, name}, _from, state) do
     new_state = increment_guest_serviced_requests(state, name)
     update_ets_state(name, new_state)
+    {:reply, new_state, new_state}
+  end
+
+  def handle_call({:set_budget, budget_amount, current_month, current_year}, _from, state) do
+    new_state = Budget.set_budget(state, budget_amount, current_month, current_year)
     {:reply, new_state, new_state}
   end
 
@@ -451,10 +412,7 @@ defmodule BudgetApp.BudgetServer do
   end
 
   # Sooo, the problem with this is that I'll need to call
-  # authorize request inside the handle_call(s) in order to have access to state
-  # But this could mean that a deluge of requests could still come in, defeating the
-  # purpose of why I even set out to do this. Well.. not entirely, state won't be built
-  # up nonstop, but DDoS is still something I need to determine how to prevent.
+  # TODO: Also limit ip requests
   defp authorize_request(state, "james.good@codeimmersives.com"), do: state
 
   defp authorize_request(state, _guest_name) do
@@ -476,16 +434,6 @@ defmodule BudgetApp.BudgetServer do
   # and then returns the new_state to facilitate pipelining.
   defp update_ets_state(name, new_state),
     do: :ets.insert(:budget_tracker_state, {name, new_state})
-
-  # def handle_call({:set_budget, budget_limit}, _from, state) do
-  #   new_state = Budget.set_budget(state, budget_limit)
-  #   {:reply, new_state, new_state}
-  # end
-
-  # def handle_call({:create_unnecessary_expense, amount}, _from, state) do
-  #   new_state = Budget.create_unnecessary_expense(state, amount)
-  #   {:reply, new_state, new_state}
-  # end
 end
 
 # :ets.lookup(:budget_tracker_state, "random@gmail.com")

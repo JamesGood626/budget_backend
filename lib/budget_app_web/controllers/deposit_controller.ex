@@ -6,8 +6,6 @@ defmodule BudgetAppWeb.DepositController do
   plug :authorize_user
 
   # TODO:
-  # 1. Determine why quest account requests aren't being
-  #    incremented despire being serviced by the Budget GenServer
   # 2. Implement the set_budget function in budget_service.ex
   #    and corresponding Budget GenServer handler
   # 3. After two is done. Implement the react reducer to add
@@ -61,10 +59,6 @@ defmodule BudgetAppWeb.DepositController do
       amount: deposit_amount,
       date: Timex.now()
     }
-
-    # json_resp =
-    #   payload
-    #   |> Poison.encode!()
 
     json(conn, payload)
   end
