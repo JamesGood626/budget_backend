@@ -53,6 +53,7 @@ defmodule BudgetAppWeb.BudgetController do
     payload = %{
       message: "Successfully set your budget for the month.",
       current_month: current_month,
+      current_year: current_year,
       updated_month_data: years_tracked[current_year][:months_tracked][current_month],
       budget: budget
     }

@@ -28,6 +28,7 @@ defmodule BudgetAppWeb.BudgetControllerTest do
       "current_budget" => 60000
     },
     "current_month" => 5,
+    "current_year" => 2019,
     "message" => "Successfully set your budget for the month.",
     "updated_month_data" => %{
       "budget" => 60000,
