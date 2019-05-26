@@ -12,7 +12,7 @@ defmodule BudgetAppWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug :fetch_session
-    # plug :protect_from_forgery
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
 
@@ -37,6 +37,7 @@ defmodule BudgetAppWeb.Router do
     get "/approve_sign_up", AuthController, :approve_sign_up
     get "/deny_sign_up", AuthController, :deny_sign_up
 
+    get "/csrf", AuthController, :csrf
     post "/signup", AuthController, :signup
     post "/login", AuthController, :login
     post "/logout", AuthController, :logout

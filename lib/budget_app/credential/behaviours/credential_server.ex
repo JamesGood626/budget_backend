@@ -65,7 +65,7 @@ defmodule BudgetApp.CredentialServer do
           {:ok, credentials}
 
         false ->
-          {:err, "Invalid request."}
+          {:err, "Invalid email or password."}
       end
 
     {:reply, val, state}

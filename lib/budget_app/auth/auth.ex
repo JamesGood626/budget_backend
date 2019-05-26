@@ -1,6 +1,7 @@
 defmodule BudgetApp.Auth do
   import Plug.Conn
 
+  use Timex
   alias BudgetApp.CredentialServer
   alias BudgetApp.AuthService
 
@@ -13,21 +14,43 @@ defmodule BudgetApp.Auth do
   # However... when using put_session/3 axios can send what was set just fine..
   # What is the underlying implementation of put_session/3?
   def authorize_user(conn, _opts) do
-    %{email: email, remember_token: remember_token} = get_session(conn, :session_token)
+    %{email: email, remember_token: remember_token, expiry: expiry} =
+      get_session(conn, :session_token)
+
     IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
     IO.inspect(email)
     IO.inspect(remember_token)
+    IO.puts("THE EXPIRY")
+    IO.inspect(expiry)
     # cookie = fetch_cookies(conn)
     # IO.puts("RETRIEVED FROM fetch_cookies")
     # IO.inspect(cookie)
+    datetime = Timex.now() |> DateTime.to_unix()
 
+    case datetime < expiry do
+      true ->
+        fetch_user(conn, email, remember_token)
+
+      false ->
+        # TODO:
+        # - Remove the remember_token from Credential GenServer state
+        # - Clear session
+        # - Send json structure to indicate to React SPA that
+        #   user needs to be redirected to login page
+        IO.puts("EXPIRY TIME HAS ELAPSED")
+        conn = put_session(conn, :session_token, %{})
+    end
+  end
+
+  def fetch_user(conn, email, remember_token) do
     case CredentialServer.get_user(email) do
       {:ok, user} ->
         auth_check(conn, user, remember_token)
 
       {:err, msg} ->
-        # Or send a json response instead?
-        halt(conn)
+        # Unable to find user in GenServer State
+        # msg will be "Invalid email or password."
+        {:err, msg}
     end
   end
 
@@ -40,8 +63,9 @@ defmodule BudgetApp.Auth do
         assign(conn, :current_user, user["email"])
 
       false ->
-        IO.puts("USERS REMEMBER TOKEN DOESN'T MATCH")
-        halt(conn)
+        # User's remember_token doesn't match
+        {:err, "Invalid email or password."}
+        # json(conn, %{message: "Invalid email or password."})
     end
   end
 

@@ -5,6 +5,13 @@ defmodule BudgetAppWeb.AuthController do
   alias BudgetApp.AuthService
   alias BudgetApp.Email
 
+  def csrf(conn, _params) do
+    csrf_token = get_csrf_token()
+    IO.puts("A CSRF TOKEN:")
+    IO.inspect(csrf_token)
+    json(conn, %{csrf_token: csrf_token})
+  end
+
   def signup(conn, %{"email" => email, "password" => password} = params) do
     IO.puts("SIGNUP ROUTE HIT")
     # All of these should really be delegated to some service functions.

@@ -98,6 +98,6 @@ defmodule CredentialServerTest do
 
   test "credential server replies with :err if user is not in genserver state.", %{} do
     {:err, message} = CredentialServer.get_user(@credentials["email"])
-    assert message === "Invalid request."
+    assert message === "Invalid email or password."
   end
 end

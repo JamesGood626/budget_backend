@@ -62,9 +62,9 @@ defmodule BudgetApp.Budget do
     # posting to create a new account @ /api/account
     local_datetime = Timezone.convert(datetime, "America/New_York")
 
-    interval =
-      Interval.new(from: local_datetime, until: next_month_datetime)
-      |> Interval.duration(:days)
+    # interval =
+    #   Interval.new(from: local_datetime, until: next_month_datetime)
+    #   |> Interval.duration(:days)
 
     # IF I can get the timezone for the user consistently with the following JS
     # code then I can handle the UTC conversion to their local time:
@@ -76,7 +76,7 @@ defmodule BudgetApp.Budget do
     # DateTime<2019-03-31 20:00:00-04:00 EDT America/New_York>
     # Will it consistently be one day behind? -> I'll accept the eager date
 
-    # This is the interval that I need to be used in the schedule_work function.
+    # This is the interval that needs to be used in the schedule_work function.
     interval =
       Interval.new(from: local_datetime, until: next_month_datetime)
       |> Interval.duration(:milliseconds)
