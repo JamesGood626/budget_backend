@@ -3,6 +3,7 @@ defmodule BudgetApp.AuthService do
   # after I've confirmed that cookie signup/login flow works with these static values.
   @key "Thestrongestkeyever"
   @remember_token_bytes 32
+  use BudgetAppWeb, :controller
   use Timex
   alias BudgetApp.CredentialServer
 
@@ -33,17 +34,24 @@ defmodule BudgetApp.AuthService do
     Map.put(session_data, :expiry, expiry)
   end
 
+  def login_user(conn, %{"email" => email, "password" => password} = params) do
+    case CredentialServer.get_user(email) do
+      {:ok, user} ->
+        check_user_password_or_fail(conn, user, email, password)
+
+      {:err, message} ->
+        json(conn, %{message: message})
+    end
+  end
+
   def check_user_password(user, email, password) do
     case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
       true ->
-        # TODO: remember to invalidate token after a certain amount of time has elapsed.
-        # Generate remember token, set remember token in cookie, and send success response
         remember_token = generate_remember_token()
-        hashed_remember_token = hash_remember_token(remember_token)
-        CredentialServer.add_hashed_remember_token(email, hashed_remember_token)
-        # TODO: CredentialServer.get_user/1 can response w/ {:err, msg}
-        # refactor to account for that.
-        {:ok, user} = CredentialServer.get_user(email)
+
+        remember_token
+        |> hash_remember_token()
+        |> CredentialServer.add_hashed_remember_token(email)
 
         session_data =
           %{email: email, remember_token: remember_token}
@@ -53,6 +61,26 @@ defmodule BudgetApp.AuthService do
 
       false ->
         {:err, "Incorrect username or password!"}
+    end
+  end
+
+  def check_user_password_or_fail(conn, user, email, password) do
+    case check_user_password(user, email, password) do
+      {:ok, session_data} ->
+        conn = put_session(conn, :session_token, session_data)
+        # Remember to look into this. (Also a note left in auth.ex)
+        # Just want to see how this approach differs from the route
+        # I've chosen.
+        #   put_resp_cookie(conn, "token", session_data.remember_token,
+        #     # http_only: true,
+        #     # secure: true,
+        #     max_age: 604_800
+        #   )
+
+        json(conn, %{message: "Login Success!"})
+
+      {:err, message} ->
+        json(conn, %{message: message})
     end
   end
 end

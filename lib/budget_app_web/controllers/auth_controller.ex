@@ -59,41 +59,17 @@ defmodule BudgetAppWeb.AuthController do
     json(conn, %{message: "you've successfully denied the sign up!"})
   end
 
-  def login(conn, %{"email" => email, "password" => password}) do
-    case CredentialServer.get_user(email) do
-      {:ok, user} ->
-        case AuthService.check_user_password(user, email, password) do
-          {:ok, session_data} ->
-            conn = put_session(conn, :session_token, session_data)
-            # Remember to look into this. (Also a note left in auth.ex)
-            #   put_resp_cookie(conn, "token", session_data.remember_token,
-            #     # http_only: true,
-            #     # secure: true,
-            #     max_age: 604_800
-            #   )
-            json(conn, %{message: "Login Success!"})
-
-          {:err, message} ->
-            json(conn, %{message: message})
-        end
-
-      {:err, message} ->
-        json(conn, %{message: message})
-    end
+  def login(conn, %{"email" => email, "password" => password} = params) do
+    AuthService.login_user(conn, params)
   end
 
   def logout(conn, _params) do
-    # Tried clear_session.1 | delete_session/2 | configure_session(conn, :drop)
-    # None of the above worked to clear the cookie from the conn session. However,
-    # just removing the remember token alone does force the user to sign in again.
-    # but still want to look into this later.
     %{email: email} = get_session(conn, :session_token)
 
     case CredentialServer.remove_hashed_remember_token(email) do
       {:ok, _msg} ->
         conn
         |> put_session(:session_token, %{})
-        |> IO.inspect()
         |> json(%{message: "Logout Success!"})
 
       {:err, _msg} ->

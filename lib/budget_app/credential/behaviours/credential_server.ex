@@ -24,8 +24,8 @@ defmodule BudgetApp.CredentialServer do
     GenServer.call(__MODULE__, {:get_user, email})
   end
 
-  def add_hashed_remember_token(email, hashed_remember_token) do
-    GenServer.call(__MODULE__, {:add_hashed_remember_token, email, hashed_remember_token})
+  def add_hashed_remember_token(hashed_remember_token, email) do
+    GenServer.call(__MODULE__, {:add_hashed_remember_token, hashed_remember_token, email})
   end
 
   def remove_hashed_remember_token(email) do
@@ -71,7 +71,7 @@ defmodule BudgetApp.CredentialServer do
     {:reply, val, state}
   end
 
-  def handle_call({:add_hashed_remember_token, email, hashed_remember_token}, _from, state) do
+  def handle_call({:add_hashed_remember_token, hashed_remember_token, email}, _from, state) do
     case Map.has_key?(state, email) do
       true ->
         %{^email => credentials} = state
@@ -93,8 +93,6 @@ defmodule BudgetApp.CredentialServer do
         %{^email => credentials} = state
         updated_credentials = Map.delete(credentials, "hashed_remember_token")
         updated_state = Map.put(state, email, updated_credentials)
-        IO.puts("Updated state from removing RemTOKEN")
-        IO.inspect(updated_state)
         {:reply, {:ok, "Removed Remember Token Hash."}, updated_state}
 
       false ->

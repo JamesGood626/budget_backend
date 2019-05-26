@@ -65,7 +65,7 @@ defmodule CredentialServerTest do
 
   test "credential server can add a hashed_remember_token to a user's credentials.", %{} do
     CredentialServer.create_credentials(@credentials)
-    CredentialServer.add_hashed_remember_token(@credentials["email"], "da_hashed_remember_token")
+    CredentialServer.add_hashed_remember_token("da_hashed_remember_token", @credentials["email"])
     credential_server_state = CredentialServer.get_state()
 
     # updated credentials required for matching genserver state that has newly added hashed_remember_token.
