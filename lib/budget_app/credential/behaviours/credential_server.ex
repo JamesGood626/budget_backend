@@ -93,6 +93,8 @@ defmodule BudgetApp.CredentialServer do
         %{^email => credentials} = state
         updated_credentials = Map.delete(credentials, "hashed_remember_token")
         updated_state = Map.put(state, email, updated_credentials)
+        IO.puts("Updated state from removing RemTOKEN")
+        IO.inspect(updated_state)
         {:reply, {:ok, "Removed Remember Token Hash."}, updated_state}
 
       false ->

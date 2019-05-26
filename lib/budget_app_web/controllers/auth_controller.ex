@@ -91,7 +91,10 @@ defmodule BudgetAppWeb.AuthController do
 
     case CredentialServer.remove_hashed_remember_token(email) do
       {:ok, _msg} ->
-        json(conn, %{message: "Logout Success!"})
+        conn
+        |> put_session(:session_token, %{})
+        |> IO.inspect()
+        |> json(%{message: "Logout Success!"})
 
       {:err, _msg} ->
         json(conn, %{message: "Logout Failed!"})

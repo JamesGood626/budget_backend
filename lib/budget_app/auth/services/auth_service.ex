@@ -25,10 +25,9 @@ defmodule BudgetApp.AuthService do
   def generate_expiry_time(session_data) do
     # To facilitate testing this, it would be ideal
     # to inject the values for days and hours
-    # days: 1, hours: 12
     expiry =
       Timex.now()
-      |> Timex.shift(seconds: 40)
+      |> Timex.shift(days: 1, hours: 12)
       |> DateTime.to_unix()
 
     Map.put(session_data, :expiry, expiry)
