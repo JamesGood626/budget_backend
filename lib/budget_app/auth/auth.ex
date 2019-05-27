@@ -14,32 +14,64 @@ defmodule BudgetApp.Auth do
   # However... when using put_session/3 axios can send what was set just fine..
   # What is the underlying implementation of put_session/3?
   def authorize_user(conn, _opts) do
-    %{email: email, remember_token: remember_token, expiry: expiry} =
-      get_session(conn, :session_token)
+    # TODO: implement case to handle failure
+    case get_session(conn, :session_token) do
+      %{email: email, remember_token: remember_token, expiry: expiry} ->
+        IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
+        IO.inspect(email)
+        IO.inspect(remember_token)
+        IO.puts("THE EXPIRY")
+        IO.inspect(expiry)
+        datetime = Timex.now() |> DateTime.to_unix()
 
-    IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
-    IO.inspect(email)
-    IO.inspect(remember_token)
-    IO.puts("THE EXPIRY")
-    IO.inspect(expiry)
-    # cookie = fetch_cookies(conn)
-    # IO.puts("RETRIEVED FROM fetch_cookies")
-    # IO.inspect(cookie)
-    datetime = Timex.now() |> DateTime.to_unix()
+        case datetime < expiry do
+          true ->
+            fetch_user(conn, email, remember_token)
 
-    case datetime < expiry do
-      true ->
-        fetch_user(conn, email, remember_token)
+          false ->
+            # TODO:
+            # - Remove the remember_token from Credential GenServer state
+            # - Clear session
+            # - Send json structure to indicate to React SPA that
+            #   user needs to be redirected to login page
+            IO.puts("EXPIRY TIME HAS ELAPSED")
+            # conn = put_session(conn, :session_token, %{})
+            # TODO: Use case statements for when controller attempts to
+            # access :current_user off of conn.assigns
+            delete_session(conn, :session_token)
+            |> assign(:current_user, nil)
+        end
 
-      false ->
-        # TODO:
-        # - Remove the remember_token from Credential GenServer state
-        # - Clear session
-        # - Send json structure to indicate to React SPA that
-        #   user needs to be redirected to login page
-        IO.puts("EXPIRY TIME HAS ELAPSED")
-        conn = put_session(conn, :session_token, %{})
+      nil ->
+        assign(conn, :current_user, nil)
     end
+
+    # %{email: email, remember_token: remember_token, expiry: expiry} =
+    #   get_session(conn, :session_token)
+
+    # IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
+    # IO.inspect(email)
+    # IO.inspect(remember_token)
+    # IO.puts("THE EXPIRY")
+    # IO.inspect(expiry)
+    # # cookie = fetch_cookies(conn)
+    # # IO.puts("RETRIEVED FROM fetch_cookies")
+    # # IO.inspect(cookie)
+    # datetime = Timex.now() |> DateTime.to_unix()
+
+    # case datetime < expiry do
+    #   true ->
+    #     fetch_user(conn, email, remember_token)
+
+    #   false ->
+    #     # TODO:
+    #     # - Remove the remember_token from Credential GenServer state
+    #     # - Clear session
+    #     # - Send json structure to indicate to React SPA that
+    #     #   user needs to be redirected to login page
+    #     IO.puts("EXPIRY TIME HAS ELAPSED")
+    #     conn = put_session(conn, :session_token, %{})
+    # end
   end
 
   def fetch_user(conn, email, remember_token) do

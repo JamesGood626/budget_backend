@@ -1,10 +1,11 @@
 defmodule BudgetAppWeb.AuthController do
   use BudgetAppWeb, :controller
-  alias BudgetApp.BudgetSupervisor
-  alias BudgetApp.{BudgetServer, CredentialServer}
+  alias BudgetApp.CredentialServer
   alias BudgetApp.AuthService
-  alias BudgetApp.Email
 
+  # TODO: secret on the
+  # client side so that only that particular
+  # client may receive the csrf.
   def csrf(conn, _params) do
     csrf_token = get_csrf_token()
     json(conn, %{csrf_token: csrf_token})

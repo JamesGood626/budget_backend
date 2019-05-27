@@ -5,7 +5,9 @@ defmodule BudgetApp.AuthService do
   @remember_token_bytes 32
   use BudgetAppWeb, :controller
   use Timex
-  alias BudgetApp.CredentialServer
+  alias BudgetApp.BudgetSupervisor
+  alias BudgetApp.{BudgetServer, CredentialServer}
+  alias BudgetApp.Email
 
   def generate_short_token do
     :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.url_encode64()
@@ -26,9 +28,10 @@ defmodule BudgetApp.AuthService do
   def generate_expiry_time(session_data) do
     # To facilitate testing this, it would be ideal
     # to inject the values for days and hours
+    # days: 1, hours: 12
     expiry =
       Timex.now()
-      |> Timex.shift(days: 1, hours: 12)
+      |> Timex.shift(seconds: 40)
       |> DateTime.to_unix()
 
     Map.put(session_data, :expiry, expiry)
@@ -42,13 +45,13 @@ defmodule BudgetApp.AuthService do
 
       # Move all this logic into the Auth Module
       {:err, _message} ->
-        hash = AuthService.hash_password(password)
+        hash = hash_password(password)
 
         Map.put(params, "password", hash)
         |> Map.put_new("active", false)
         |> CredentialServer.create_credentials()
 
-        short_token = AuthService.generate_short_token()
+        short_token = generate_short_token()
         CredentialServer.add_short_token(email, short_token)
         Email.send_signup_email(short_token, email)
         json(conn, %{message: "you've successfully requested to sign up #{email}"})
@@ -78,7 +81,8 @@ defmodule BudgetApp.AuthService do
     case CredentialServer.remove_hashed_remember_token(email) do
       {:ok, _msg} ->
         conn
-        |> put_session(:session_token, %{})
+        # |> put_session(:session_token, %{})
+        |> delete_session(:session_token)
         |> json(%{message: "Logout Success!"})
 
       {:err, _msg} ->
