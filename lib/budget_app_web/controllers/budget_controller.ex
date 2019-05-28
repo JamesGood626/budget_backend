@@ -19,8 +19,8 @@ defmodule BudgetAppWeb.BudgetController do
         json(conn, %{message: @invalid_session_message})
 
       %{current_user: current_user} ->
-        IO.puts("THE CURRENT USER")
-        IO.inspect(current_user)
+        # IO.puts("THE CURRENT USER")
+        # IO.inspect(current_user)
         %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
 
         %{

@@ -1,6 +1,16 @@
 defmodule BudgetAppWeb.Router do
   use BudgetAppWeb, :router
 
+  # FINAL TODOS:
+  # - Implement the IP address rate limiting
+  # - Swap out primary account hard coded email from the Budget Server
+  # functions that are pattern matching on it... And instead see if
+  # I can implement env_vars...
+  # - Can bamboos logs be disabled? What's important for logging...monitoring securely?
+  # - Deploy this B.
+  # - Continue to refer back to this project and see better ways I could've
+  #   implemented certain things for better testability.
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session

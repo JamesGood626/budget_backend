@@ -14,64 +14,28 @@ defmodule BudgetApp.Auth do
   # However... when using put_session/3 axios can send what was set just fine..
   # What is the underlying implementation of put_session/3?
   def authorize_user(conn, _opts) do
-    # TODO: implement case to handle failure
-    case get_session(conn, :session_token) do
-      %{email: email, remember_token: remember_token, expiry: expiry} ->
-        IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
-        IO.inspect(email)
-        IO.inspect(remember_token)
-        IO.puts("THE EXPIRY")
-        IO.inspect(expiry)
-        datetime = Timex.now() |> DateTime.to_unix()
+    get_session(conn, :session_token)
+    |> authorize(conn)
+  end
 
-        case datetime < expiry do
-          true ->
-            fetch_user(conn, email, remember_token)
+  def authorize(nil, conn), do: assign(conn, :current_user, nil)
 
-          false ->
-            # TODO:
-            # - Remove the remember_token from Credential GenServer state
-            # - Clear session
-            # - Send json structure to indicate to React SPA that
-            #   user needs to be redirected to login page
-            IO.puts("EXPIRY TIME HAS ELAPSED")
-            # conn = put_session(conn, :session_token, %{})
-            # TODO: Use case statements for when controller attempts to
-            # access :current_user off of conn.assigns
-            delete_session(conn, :session_token)
-            |> assign(:current_user, nil)
-        end
+  def authorize(%{expiry: expiry} = params, conn) do
+    Timex.now()
+    |> DateTime.to_unix()
+    |> check_expiry(expiry, params, conn)
+  end
 
-      nil ->
-        assign(conn, :current_user, nil)
+  def check_expiry(datetime, expiry, %{email: email, remember_token: remember_token}, conn) do
+    case datetime < expiry do
+      true ->
+        fetch_user(conn, email, remember_token)
+
+      false ->
+        # IO.puts("EXPIRY TIME HAS ELAPSED")
+        delete_session(conn, :session_token)
+        |> assign(:current_user, nil)
     end
-
-    # %{email: email, remember_token: remember_token, expiry: expiry} =
-    #   get_session(conn, :session_token)
-
-    # IO.puts("DID GET EMAIL AND REMEMBER TOKEN")
-    # IO.inspect(email)
-    # IO.inspect(remember_token)
-    # IO.puts("THE EXPIRY")
-    # IO.inspect(expiry)
-    # # cookie = fetch_cookies(conn)
-    # # IO.puts("RETRIEVED FROM fetch_cookies")
-    # # IO.inspect(cookie)
-    # datetime = Timex.now() |> DateTime.to_unix()
-
-    # case datetime < expiry do
-    #   true ->
-    #     fetch_user(conn, email, remember_token)
-
-    #   false ->
-    #     # TODO:
-    #     # - Remove the remember_token from Credential GenServer state
-    #     # - Clear session
-    #     # - Send json structure to indicate to React SPA that
-    #     #   user needs to be redirected to login page
-    #     IO.puts("EXPIRY TIME HAS ELAPSED")
-    #     conn = put_session(conn, :session_token, %{})
-    # end
   end
 
   def fetch_user(conn, email, remember_token) do
@@ -79,36 +43,34 @@ defmodule BudgetApp.Auth do
       {:ok, user} ->
         auth_check(conn, user, remember_token)
 
-      {:err, msg} ->
+      {:err, message} ->
         # Unable to find user in GenServer State
-        # msg will be "Invalid email or password."
-        {:err, msg}
+        # message will be "Invalid email or password."
+        {:err, message}
     end
   end
 
-  # Still need to add issued_at_time (iat) to the cookie as well
-  # to invalidate cookie after certain amount of time.
   def auth_check(conn, user, remember_token) do
     case remember_token_matches?(user, remember_token) do
       true ->
-        IO.puts("USERS REMEMBER TOKEN MATCHES")
         assign(conn, :current_user, user["email"])
 
       false ->
         # User's remember_token doesn't match
         {:err, "Invalid email or password."}
-        # json(conn, %{message: "Invalid email or password."})
     end
   end
 
+  @doc """
+    remember_token is the incoming token from the request.
+
+    hashed_remember_token is the one that was stored in Credential
+    GenServer state.
+  """
   def remember_token_matches?(
         %{"hashed_remember_token" => hashed_remember_token} = user,
         remember_token
       ) do
-    IO.puts("incoming hashed token:")
-    IO.inspect(AuthService.hash_remember_token(remember_token))
-    IO.puts("stored hashed token:")
-    IO.inspect(hashed_remember_token)
     AuthService.hash_remember_token(remember_token) === hashed_remember_token
   end
 

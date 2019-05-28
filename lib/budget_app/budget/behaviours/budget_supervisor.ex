@@ -17,7 +17,7 @@ defmodule BudgetApp.BudgetSupervisor do
   # end
 
   def start_link(_options) do
-    IO.puts("DynamicSupervisor start_link/1 called!")
+    # IO.puts("DynamicSupervisor start_link/1 called!")
     DynamicSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 

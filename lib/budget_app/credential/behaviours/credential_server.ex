@@ -4,6 +4,9 @@ defmodule BudgetApp.CredentialServer do
   use GenServer, restart: :transient
   alias BudgetApp.Credential
 
+  # Could've moved out the few lines that are in handle_cast/call
+  # to separate service file... But doesn't seem worth.
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
@@ -112,29 +115,35 @@ defmodule BudgetApp.CredentialServer do
   def handle_cast({:create_credentials, credentials}, state) do
     %{"email" => email} = credentials
     new_state = Map.put_new(state, email, credentials)
+
     {:noreply, new_state}
   end
 
   def handle_cast({:add_short_token, {email, short_token}}, state) do
     %{^email => credentials} = state
+
     updated_credentials = Map.put_new(credentials, "short_token", short_token)
     updated_state = Map.put(state, email, updated_credentials)
+
     {:noreply, updated_state}
   end
 
   def handle_cast({:remove_short_token, email}, state) do
     %{^email => credentials} = state
+
     {:ok, old_credentials} = Map.fetch(state, email)
     updated_credentials = Map.delete(old_credentials, "short_token")
     updated_state = Map.put(state, email, updated_credentials)
+
     {:noreply, updated_state}
   end
 
   def handle_cast({:activate_user, email}, state) do
     {:ok, old_credentials} = Map.fetch(state, email)
-    updated_credentials = Map.put(old_credentials, "active", true)
 
+    updated_credentials = Map.put(old_credentials, "active", true)
     new_state = Map.put(state, email, updated_credentials)
+
     {:noreply, new_state}
   end
 end

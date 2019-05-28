@@ -54,7 +54,8 @@ defmodule BudgetApp.AuthService do
         short_token = generate_short_token()
         CredentialServer.add_short_token(email, short_token)
         Email.send_signup_email(short_token, email)
-        json(conn, %{message: "you've successfully requested to sign up #{email}"})
+        # Was previously sending this -> "you've successfully requested to sign up #{email}"
+        json(conn, %{message: "SIGNUP_SUCCESS"})
     end
   end
 
@@ -78,27 +79,30 @@ defmodule BudgetApp.AuthService do
   def logout_user(conn) do
     %{email: email} = get_session(conn, :session_token)
 
-    case CredentialServer.remove_hashed_remember_token(email) do
-      {:ok, _msg} ->
-        conn
-        # |> put_session(:session_token, %{})
-        |> delete_session(:session_token)
-        |> json(%{message: "Logout Success!"})
-
-      {:err, _msg} ->
-        json(conn, %{message: "Logout Failed!"})
-    end
+    email
+    |> CredentialServer.remove_hashed_remember_token()
+    |> logout_response(conn)
   end
+
+  def logout_response({:ok, _msg}, conn) do
+    conn
+    |> delete_session(:session_token)
+    |> json(%{message: "LOGOUT_SUCCESS"})
+  end
+
+  def logout_response({:err, _msg}, conn), do: json(conn, %{message: "Logout Failed!"})
 
   def login_user(conn, %{"email" => email, "password" => password} = params) do
-    case CredentialServer.get_user(email) do
-      {:ok, user} ->
-        check_user_password_or_fail(conn, user, email, password)
-
-      {:err, message} ->
-        json(conn, %{message: message})
-    end
+    email
+    |> CredentialServer.get_user()
+    |> login_response(conn, params)
   end
+
+  def login_response({:ok, user}, conn, %{"email" => email, "password" => password} = params) do
+    check_user_password_or_fail(conn, user, email, password)
+  end
+
+  def login_response({:err, message}, conn, _params), do: json(conn, %{message: message})
 
   def check_user_password(user, email, password) do
     case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
@@ -133,7 +137,7 @@ defmodule BudgetApp.AuthService do
         #     max_age: 604_800
         #   )
 
-        json(conn, %{message: "Login Success!"})
+        json(conn, %{message: "LOGIN_SUCCESS"})
 
       {:err, message} ->
         json(conn, %{message: message})

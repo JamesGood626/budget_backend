@@ -123,8 +123,8 @@ defmodule BudgetApp.BudgetServer do
   # end
 
   def start_link(name) do
-    IO.puts("BUDGET SERVER START_LINK RUNNING")
-    IO.inspect(name)
+    # IO.puts("BUDGET SERVER START_LINK RUNNING")
+    # IO.inspect(name)
     GenServer.start_link(__MODULE__, name, name: via_tuple(name))
   end
 
@@ -191,14 +191,14 @@ defmodule BudgetApp.BudgetServer do
     This is part of process crash state recovery.
   """
   def handle_continue({:set_state, name}, _state) do
-    IO.puts("INSIDE HANDLE CONTINUE")
+    # IO.puts("INSIDE HANDLE CONTINUE")
     # i.e. if current_month = 3 and current_year = 19
     #      then next_month = 4 and year = 19
     {_datetime, current_month, current_year} = Budget.get_current_date()
-    IO.puts("cureent_month")
-    IO.inspect(current_month)
-    IO.puts("cureent_year")
-    IO.inspect(current_year)
+    # IO.puts("cureent_month")
+    # IO.inspect(current_month)
+    # IO.puts("cureent_year")
+    # IO.inspect(current_year)
     state = fresh_state(name, current_month, current_year)
     state = schedule_monthly_work(state)
 
@@ -227,8 +227,7 @@ defmodule BudgetApp.BudgetServer do
   # random account names, could I have multiple function clauses to check
   # each one.
   defp check_guest_account(state, name) do
-    # If you're not James or Guest... You shall not pass!
-    IO.puts("check_guest_account running!!!!!!")
+    # IO.puts("check_guest_account running!!!!!!")
 
     case name do
       "james.good@codeimmersives.com" ->
@@ -240,8 +239,8 @@ defmodule BudgetApp.BudgetServer do
           |> Budget.set_guest_restrictions()
 
         update_ets_state(state.budget_tracker.name, new_state)
-        IO.puts("STATE THAT GUEST IS INITIALIZED WITH")
-        IO.inspect(new_state)
+        # IO.puts("STATE THAT GUEST IS INITIALIZED WITH")
+        # IO.inspect(new_state)
         new_state
     end
   end
@@ -260,7 +259,7 @@ defmodule BudgetApp.BudgetServer do
     cancel_timer(monthly_timer)
     {monthly_interval, next_month, next_year} = Budget.budget_monthly_interval_generator()
 
-    IO.puts("Scheduling....")
+    # IO.puts("Scheduling....")
     # you need to break this scheduling of the timer out into a helper function to facilitate
     # testing, and then pass in the monthly interval as dependency injection.
     # All this in order to determine if the data structure continues to update accordingly.
@@ -282,7 +281,7 @@ defmodule BudgetApp.BudgetServer do
   # intervals to ensure that they're truly doing what they're meant to
   # before deploying into production?
   defp schedule_daily_work(%{budget_tracker: %{timers: %{daily_timer: daily_timer}}} = state) do
-    IO.puts("Scheduling daily work!!!!!!")
+    # IO.puts("Scheduling daily work!!!!!!")
     cancel_timer(daily_timer)
 
     # Set the daily_interval to twenty four hours
@@ -294,8 +293,8 @@ defmodule BudgetApp.BudgetServer do
 
   defp cancel_timer(timer) do
     if timer do
-      IO.puts("CANCELING TIMER")
-      IO.inspect(timer)
+      # IO.puts("CANCELING TIMER")
+      # IO.inspect(timer)
       Process.cancel_timer(timer)
     end
   end
@@ -318,8 +317,8 @@ defmodule BudgetApp.BudgetServer do
   end
 
   def handle_info(:reset_serviced_requests, state) do
-    IO.puts("THE :reset_serviced_requests handle_info TRIGGERED")
-    Budget.reset_serviced_requests(state)
+    # IO.puts("THE :reset_serviced_requests handle_info TRIGGERED")
+    # Budget.reset_serviced_requests(state)
     new_state = schedule_daily_work(state)
     {:noreply, new_state}
   end

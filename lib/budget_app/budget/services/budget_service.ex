@@ -308,8 +308,8 @@ defmodule BudgetApp.Budget do
         end
       )
 
-    IO.puts("BUDGET SHOULD BE UPDATED W/ CURRENT_YEAR")
-    IO.inspect(updated_budget)
+    # IO.puts("BUDGET SHOULD BE UPDATED W/ CURRENT_YEAR")
+    # IO.inspect(updated_budget)
 
     updated_budget_tracker =
       put_in(
@@ -446,8 +446,8 @@ defmodule BudgetApp.Budget do
       }
   """
   def increment_serviced_requests(budget) do
-    IO.puts("THE BUDGET IN increment_serviced_requests")
-    IO.inspect(budget)
+    # IO.puts("THE BUDGET IN increment_serviced_requests")
+    # IO.inspect(budget)
 
     {:ok, updated_budget_tracker} =
       get_and_update_in(
