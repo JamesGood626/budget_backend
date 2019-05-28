@@ -80,7 +80,16 @@ defmodule BudgetApp.CredentialServer do
         %{^email => credentials} = state
 
         updated_credentials =
-          Map.put_new(credentials, "hashed_remember_token", hashed_remember_token)
+          case Map.has_key?(credentials, "hashed_remember_token") do
+            true ->
+              %{credentials | "hashed_remember_token" => hashed_remember_token}
+
+            false ->
+              Map.put_new(credentials, "hashed_remember_token", hashed_remember_token)
+          end
+
+        # updated_credentials =
+        #   Map.put_new(credentials, "hashed_remember_token", hashed_remember_token)
 
         updated_state = Map.put(state, email, updated_credentials)
         {:reply, {:ok, "Added Remember Token Hash."}, updated_state}

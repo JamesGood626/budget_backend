@@ -90,7 +90,7 @@ defmodule BudgetApp.AuthService do
     |> json(%{message: "LOGOUT_SUCCESS"})
   end
 
-  def logout_response({:err, _msg}, conn), do: json(conn, %{message: "Logout Failed!"})
+  def logout_response({:err, _msg}, conn), do: json(conn, %{message: "LOGOUT_FAIL"})
 
   def login_user(conn, %{"email" => email, "password" => password} = params) do
     email

@@ -14,8 +14,12 @@ defmodule BudgetApp.Auth do
   # However... when using put_session/3 axios can send what was set just fine..
   # What is the underlying implementation of put_session/3?
   def authorize_user(conn, _opts) do
+    IO.puts("AUTHORIZING USER")
+
     get_session(conn, :session_token)
+    |> IO.inspect()
     |> authorize(conn)
+    |> IO.inspect()
   end
 
   def authorize(nil, conn), do: assign(conn, :current_user, nil)
@@ -32,7 +36,6 @@ defmodule BudgetApp.Auth do
         fetch_user(conn, email, remember_token)
 
       false ->
-        # IO.puts("EXPIRY TIME HAS ELAPSED")
         delete_session(conn, :session_token)
         |> assign(:current_user, nil)
     end
@@ -57,7 +60,7 @@ defmodule BudgetApp.Auth do
 
       false ->
         # User's remember_token doesn't match
-        {:err, "Invalid email or password."}
+        assign(conn, :current_user, nil)
     end
   end
 
