@@ -4,6 +4,8 @@ defmodule BudgetAppWeb.NecessaryExpenseControllerTest do
   alias BudgetApp.{BudgetServer}
   alias BudgetApp.{CredentialServer}
 
+  {:ok, %{month: month}} = DateTime.now("Etc/UTC")
+
   @guest_account "necessary_exp@gmail.com"
   @credentials %{
     "email" => "necessary_exp@gmail.com",
@@ -17,7 +19,7 @@ defmodule BudgetAppWeb.NecessaryExpenseControllerTest do
   @necessary_expense_input %{
     "expense" => "Rent",
     "amount" => 90000,
-    "current_month" => 5,
+    "current_month" => month,
     "current_year" => 2019
   }
   @necessary_expense_post_result %{
@@ -38,8 +40,6 @@ defmodule BudgetAppWeb.NecessaryExpenseControllerTest do
     conn = post(conn, "/api/login", @login_input)
     conn = post(conn, "/api/necessary-expense", @necessary_expense_input)
 
-    # Not testing that date is on the response currently
-    # But it is there.
     assert @necessary_expense_post_result = json_response(conn, 200)
   end
 end

@@ -2,7 +2,7 @@ defmodule BudgetServerTest do
   use ExUnit.Case, async: true
   alias BudgetApp.{BudgetServer, Budget}
 
-  @primary_account "james.good@codeimmersives.com"
+  @primary_account "jamesgood626@gmail.com"
   @guest_account "guest@gmail.com"
   @initial_account_data %Budget{
     budget_tracker: %{
@@ -61,8 +61,6 @@ defmodule BudgetServerTest do
     %{budget_tracker: budget_tracker} = guest_state
     assert is_reference(budget_tracker.timers.monthly_timer) === true
     assert is_reference(budget_tracker.timers.daily_timer) === true
-
-    # assert @initial_account_data === BudgetServer.get_account(@primary_account)
   end
 
   test "guest_account state is initialized with restrictions", %{guest_state: guest_state} do
@@ -90,11 +88,6 @@ defmodule BudgetServerTest do
     assert request_limit === 200
     assert serviced_requests === 1
   end
-
-  # test "Can deposit." do
-  #   # Do Deposit
-  #   %{budget_tracker: budget_tracker} = BudgetServer.get_account(@primary_account)
-  # end
 
   # Tests I could write but decided not to.
   # "Primary account requests aren't limited"

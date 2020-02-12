@@ -4,6 +4,8 @@ defmodule BudgetAppWeb.BudgetControllerTest do
   alias BudgetApp.{BudgetServer}
   alias BudgetApp.{CredentialServer}
 
+  {:ok, %{month: month}} = DateTime.now("Etc/UTC")
+
   @guest_account "budget@gmail.com"
   @credentials %{
     "email" => "budget@gmail.com",
@@ -17,7 +19,7 @@ defmodule BudgetAppWeb.BudgetControllerTest do
   @budget_input %{
     "income_source" => "Check",
     "budget_amount" => 60000,
-    "current_month" => 5,
+    "current_month" => month,
     "current_year" => 2019
   }
   @budget_post_result %{
@@ -27,7 +29,7 @@ defmodule BudgetAppWeb.BudgetControllerTest do
       "budget_set" => true,
       "current_budget" => 60000
     },
-    "current_month" => 5,
+    "current_month" => month,
     "current_year" => 2019,
     "message" => "Successfully set your budget for the month.",
     "updated_month_data" => %{

@@ -446,9 +446,6 @@ defmodule BudgetApp.Budget do
       }
   """
   def increment_serviced_requests(budget) do
-    # IO.puts("THE BUDGET IN increment_serviced_requests")
-    # IO.inspect(budget)
-
     {:ok, updated_budget_tracker} =
       get_and_update_in(
         budget,
@@ -471,13 +468,19 @@ defmodule BudgetApp.Budget do
       iex> budget = BudgetApp.Budget.initialize_budget(budget, "random@gmail.com", 3, 2019)
       iex> budget = BudgetApp.Budget.set_guest_restrictions(budget)
       iex> BudgetApp.Budget.check_serviced_requests(budget)
-      true
+      {:ok, "Allow request."}
   """
   def check_serviced_requests(
         %{budget_tracker: %{request_limit: request_limit, serviced_requests: serviced_requests}} =
           budget
       ) do
-    serviced_requests < request_limit
+    case serviced_requests <= request_limit do
+      true ->
+        {:ok, "Allow request."}
+
+      false ->
+        {:err, "Deny request."}
+    end
   end
 
   @doc """

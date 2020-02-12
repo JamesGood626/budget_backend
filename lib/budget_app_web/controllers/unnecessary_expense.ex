@@ -5,6 +5,9 @@ defmodule BudgetAppWeb.UnnecessaryExpenseController do
   import BudgetApp.Auth
   plug :authorize_user
 
+  # Would refactor this logic out into a service file if there
+  # were more than one controller...
+
   @doc """
     A POST to create a new unnecessary_expense.
   """
@@ -38,20 +41,7 @@ defmodule BudgetAppWeb.UnnecessaryExpenseController do
       date: Timex.now()
     }
 
-    # json_resp =
-    #   payload
-    #   |> Poison.encode!()
-
     json(conn, payload)
-  end
-
-  @doc """
-    A DELETE to delete an existing deposit.
-  """
-  def delete(conn, _params) do
-    %{"id" => id} = conn.params
-    # A call to BudgetServer client function
-    json(conn, %{message: "You deposit delete it: #{id}"})
   end
 end
 

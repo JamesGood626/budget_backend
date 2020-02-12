@@ -8,19 +8,19 @@ defmodule BudgetAppWeb.BudgetController do
 
   @invalid_session_message "INVALID_SESSION"
 
+  # Would refactor this logic out into a service file if there
+  # were more than one controller...
+
   @doc """
     A GET to retrieve an existing account
   """
   def index(conn, _params) do
-    # TODO: REFACTOR THIS FROM OUT OF THE CONTROLLER!!!!
     # current_user is the user's email
     case conn.assigns do
       %{current_user: nil} ->
         json(conn, %{message: @invalid_session_message})
 
       %{current_user: current_user} ->
-        # IO.puts("THE CURRENT USER")
-        # IO.inspect(current_user)
         %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
 
         %{
@@ -39,27 +39,6 @@ defmodule BudgetAppWeb.BudgetController do
 
         json(conn, payload)
     end
-
-    # %{current_user: current_user} = conn.assigns
-    #     IO.puts("THE CURRENT USER")
-    #     IO.inspect(current_user)
-    #     %{budget_tracker: budget_tracker} = BudgetServer.get_account(current_user)
-
-    #     %{
-    #       budget: budget,
-    #       years_tracked: years_tracked,
-    #       current_month: current_month,
-    #       current_year: current_year
-    #     } = budget_tracker
-
-    #     payload = %{
-    #       budget: budget,
-    #       years_tracked: years_tracked,
-    #       current_month: current_month,
-    #       current_year: current_year
-    #     }
-
-    #     json(conn, payload)
   end
 
   @doc """

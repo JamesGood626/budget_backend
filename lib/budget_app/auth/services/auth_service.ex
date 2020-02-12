@@ -9,39 +9,23 @@ defmodule BudgetApp.AuthService do
   alias BudgetApp.{BudgetServer, CredentialServer}
   alias BudgetApp.Email
 
-  def generate_short_token do
-    :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.url_encode64()
-  end
+  @bad_request 400
 
-  def generate_remember_token do
-    :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.encode64()
+  def hash_password(password) do
+    Bcrypt.hash_pwd_salt(password)
   end
 
   def hash_remember_token(remember_token) do
     :crypto.hmac(:sha256, @key, remember_token) |> Base.encode64()
   end
 
-  def hash_password(password) do
-    Bcrypt.hash_pwd_salt(password)
-  end
-
-  def generate_expiry_time(session_data) do
-    # To facilitate testing this, it would be ideal
-    # to inject the values for days and hours
-    # days: 1, hours: 12
-    expiry =
-      Timex.now()
-      |> Timex.shift(seconds: 40)
-      |> DateTime.to_unix()
-
-    Map.put(session_data, :expiry, expiry)
-  end
-
   def signup_user(conn, %{"email" => email, "password" => password} = params) do
     case CredentialServer.get_user(email) do
       {:ok, _user} ->
         # status code?
-        json(conn, %{message: "That email is taken."})
+        conn
+        |> put_status(@bad_request)
+        |> json(%{type: "EMAIL_TAKEN", message: "That email is taken."})
 
       # Move all this logic into the Auth Module
       {:err, _message} ->
@@ -65,6 +49,7 @@ defmodule BudgetApp.AuthService do
     case user["short_token"] === short_token do
       true ->
         # Move all this to a separate function (/Auth Module) which uses a when block?
+        # TODO: Use a with block to handle failure cases...
         CredentialServer.remove_short_token(user_email)
         CredentialServer.activate_user(user_email)
         BudgetSupervisor.start_budget(user_email)
@@ -75,6 +60,18 @@ defmodule BudgetApp.AuthService do
         json(conn, %{message: "Invalid short token!"})
     end
   end
+
+  def login_user(conn, %{"email" => email, "password" => password} = params) do
+    email
+    |> CredentialServer.get_user()
+    |> login_response(conn, params)
+  end
+
+  def login_response({:ok, user}, conn, %{"email" => email, "password" => password} = params) do
+    check_user_password_or_fail(conn, user, email, password)
+  end
+
+  def login_response({:err, message}, conn, _params), do: json(conn, %{message: message})
 
   def logout_user(conn) do
     %{email: email} = get_session(conn, :session_token)
@@ -92,19 +89,27 @@ defmodule BudgetApp.AuthService do
 
   def logout_response({:err, _msg}, conn), do: json(conn, %{message: "LOGOUT_FAIL"})
 
-  def login_user(conn, %{"email" => email, "password" => password} = params) do
-    email
-    |> CredentialServer.get_user()
-    |> login_response(conn, params)
+  #########################################
+  defp generate_short_token do
+    :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.url_encode64()
   end
 
-  def login_response({:ok, user}, conn, %{"email" => email, "password" => password} = params) do
-    check_user_password_or_fail(conn, user, email, password)
+  defp generate_remember_token do
+    :crypto.strong_rand_bytes(@remember_token_bytes) |> Base.encode64()
   end
 
-  def login_response({:err, message}, conn, _params), do: json(conn, %{message: message})
+  defp generate_expiry_time(session_data) do
+    # To facilitate testing this, it would be ideal
+    # to inject the values for days and hours
+    expiry =
+      Timex.now()
+      |> Timex.shift(days: 1, hours: 12)
+      |> DateTime.to_unix()
 
-  def check_user_password(user, email, password) do
+    Map.put(session_data, :expiry, expiry)
+  end
+
+  defp check_user_password(user, email, password) do
     case Bcrypt.verify_pass(password, user["password"]) and user["active"] do
       true ->
         remember_token = generate_remember_token()
@@ -124,7 +129,7 @@ defmodule BudgetApp.AuthService do
     end
   end
 
-  def check_user_password_or_fail(conn, user, email, password) do
+  defp check_user_password_or_fail(conn, user, email, password) do
     case check_user_password(user, email, password) do
       {:ok, session_data} ->
         conn = put_session(conn, :session_token, session_data)

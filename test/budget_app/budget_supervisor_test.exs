@@ -2,6 +2,10 @@ defmodule BudgetSupervisorTest do
   use ExUnit.Case, async: true
   alias BudgetApp.{BudgetSupervisor, BudgetServer, Budget}
 
+  # This test file became irrelevant now that I've added
+  # the email signup Rest controllers. Just keep it around for
+  # later reference.
+
   @primary_account "James"
   @fail_account "FailAccount"
   # @initial_account_data %Budget{
@@ -55,13 +59,4 @@ defmodule BudgetSupervisorTest do
   #   :timer.sleep(100)
   #   assert Process.alive?(pid) === false
   # end
-
-  # test "Can deposit." do
-  #   # Do Deposit
-  #   %{budget_tracker: budget_tracker} = BudgetServer.get_account(@primary_account)
-  # end
-
-  # Tests I could write but decided not to.
-  # "Primary account requests aren't limited"
-  # "Guest account requests are limited"
 end

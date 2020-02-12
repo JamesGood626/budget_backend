@@ -19,7 +19,6 @@ defmodule BudgetApp.Auth do
     get_session(conn, :session_token)
     |> IO.inspect()
     |> authorize(conn)
-    |> IO.inspect()
   end
 
   def authorize(nil, conn), do: assign(conn, :current_user, nil)

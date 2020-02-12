@@ -5,6 +5,12 @@ defmodule BudgetApp.BudgetServer do
   alias BudgetApp.Budget
 
   @daily_interval 60 * 60 * 24
+  # Should
+  @exceeded_request_limit_payload %{
+    type: "REQUEST_LIMIT_EXCEEDED",
+    message: "Requests serviced exceeded."
+  }
+
   # Mar 19th TODO:
   #  - Finish testing GenServer behavior
   #  - Create more robust ETS set
@@ -227,10 +233,8 @@ defmodule BudgetApp.BudgetServer do
   # random account names, could I have multiple function clauses to check
   # each one.
   defp check_guest_account(state, name) do
-    # IO.puts("check_guest_account running!!!!!!")
-
     case name do
-      "james.good@codeimmersives.com" ->
+      "jamesgood626@gmail.com" ->
         state
 
       _ ->
@@ -239,8 +243,6 @@ defmodule BudgetApp.BudgetServer do
           |> Budget.set_guest_restrictions()
 
         update_ets_state(state.budget_tracker.name, new_state)
-        # IO.puts("STATE THAT GUEST IS INITIALIZED WITH")
-        # IO.inspect(new_state)
         new_state
     end
   end
@@ -348,7 +350,7 @@ defmodule BudgetApp.BudgetServer do
     # handle calls.
     case authorize_request(state, name) do
       false ->
-        {:reply, "Requests serviced exceeded.", state}
+        {:reply, @exceeded_request_limit_payload, state}
 
       state ->
         case increment_guest_serviced_requests(state, name) do
@@ -412,19 +414,19 @@ defmodule BudgetApp.BudgetServer do
 
   # Sooo, the problem with this is that I'll need to call
   # TODO: Also limit ip requests
-  defp authorize_request(state, "james.good@codeimmersives.com"), do: state
+  defp authorize_request(state, "jamesgood626@gmail.com"), do: state
 
   defp authorize_request(state, _guest_name) do
     case Budget.check_serviced_requests(state) do
-      true ->
+      {:ok, "Allow request."} ->
         state
 
-      _ ->
+      {:err, "Deny request."} ->
         false
     end
   end
 
-  defp increment_guest_serviced_requests(state, "james.good@codeimmersives.com"), do: state
+  defp increment_guest_serviced_requests(state, "jamesgood626@gmail.com"), do: state
 
   defp increment_guest_serviced_requests(state, _guest_name),
     do: Budget.increment_serviced_requests(state)

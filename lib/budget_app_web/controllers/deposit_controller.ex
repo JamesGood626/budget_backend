@@ -7,12 +7,9 @@ defmodule BudgetAppWeb.DepositController do
 
   @invalid_session_message "INVALID_SESSION"
 
-  # TODO:
-  # 2. Implement the set_budget function in budget_service.ex
-  #    and corresponding Budget GenServer handler
-  # 3. After two is done. Implement the react reducer to add
-  #    that budget into the nested month data so that a total
-  #    may be calculated for the Aggregated Budget:
+  # Would refactor this logic out into a service file if there
+  # were more than one controller...
+
   @doc """
     A POST to create a new deposit.
   """
@@ -25,48 +22,63 @@ defmodule BudgetAppWeb.DepositController do
           "current_year" => current_year
         } = params
       ) do
+    IO.inspect("the conn.assigns")
+    IO.inspect(conn.assigns)
+
     case conn.assigns do
       %{current_user: nil} ->
         json(conn, %{message: @invalid_session_message})
 
       # current_user is the user's email.
       %{current_user: current_user} ->
-        # TODO:
-        # Last left off w/ updating the return format to facilitate a payload of this structure:
-        # %{
-        #   category: "DEPOSIT",
-        #   type: "check",
-        #   account_balance: 1000,
-        #   amount: 2000,
-        #   date: transaction_timestamp()
-        # }
-        # Need to ensure that I destructure that off of the call to BudgetServer.deposit below
-        # As well as update the expense controllers to return a similar structure as well.
-        # This will actually require returning the entire Budget struct + the structure above
-        # from the budget service functions -> to save on nested retrieval.
-        %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
+        IO.puts("current_user")
+        IO.inspect(current_user)
+
+        payload =
           BudgetServer.deposit(
             current_user,
             %{"income_source" => income_source, "deposit_amount" => deposit_amount},
             {current_month, current_year}
           )
-
-        current_month_data = years_tracked[current_year].months_tracked[current_month]
-
-        # This is the format that the client expects now.... This is what not planning ahead
-        # Gets ya.
-        payload = %{
-          category: "DEPOSIT",
-          type: income_source,
-          account_balance: budget.account_balance,
-          total_deposited: current_month_data.total_deposited,
-          amount: deposit_amount,
-          date: Timex.now()
-        }
+          |> IO.inspect()
+          |> format_result(params)
+          |> IO.inspect()
 
         json(conn, payload)
     end
   end
+
+  # %{budget_tracker: %{budget: budget, years_tracked: years_tracked}} =
+  #   BudgetServer.deposit(
+  #     current_user,
+  #     %{"income_source" => income_source, "deposit_amount" => deposit_amount},
+  #     {current_month, current_year}
+  #   )
+
+  # Should've formatted this to return as:
+  # %{type: "DEPOSIT_SUCCESS", message: "Your deposit went through!", data: payload }
+  def format_result(
+        %{budget_tracker: %{budget: budget, years_tracked: years_tracked}},
+        %{
+          "income_source" => income_source,
+          "deposit_amount" => deposit_amount,
+          "current_month" => current_month,
+          "current_year" => current_year
+        }
+      ) do
+    current_month_data = years_tracked[current_year].months_tracked[current_month]
+
+    %{
+      category: "DEPOSIT",
+      type: income_source,
+      account_balance: budget.account_balance,
+      total_deposited: current_month_data.total_deposited,
+      amount: deposit_amount,
+      date: Timex.now()
+    }
+  end
+
+  def format_result(data = %{type: "REQUEST_LIMIT_EXCEEDED", message: message}, _params), do: data
 end
 
 # In this case /api/deposit is our resource

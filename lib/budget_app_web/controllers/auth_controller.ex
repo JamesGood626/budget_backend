@@ -7,6 +7,8 @@ defmodule BudgetAppWeb.AuthController do
   # client side so that only that particular
   # client may receive the csrf.
   def csrf(conn, _params) do
+    # NOTE: There's also delete_csrf_token
+    # handle that for signout
     csrf_token = get_csrf_token()
     json(conn, %{csrf_token: csrf_token})
   end
